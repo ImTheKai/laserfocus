@@ -135,4 +135,21 @@ class LaserFocusConfigTest < ActiveSupport::TestCase
     assert_equal "10016", d.delivery_link_type_id
     assert_equal %w[summary issuelinks customfield_11275 customfield_11290 customfield_10019], d.issue_fields
   end
+
+  test "reviews is off without its section" do
+    assert_nil LaserFocus::Config.load_from_string(BASE).reviews
+  end
+
+  test "reviews fills in the default thresholds" do
+    cfg = LaserFocus::Config.load_from_string(BASE + <<~YAML)
+      reviews:
+        repos: ["acme/server", "Acme/Server", "acme/docs"]
+        exclude_authors: ["Dependabot[bot]"]
+    YAML
+    assert_equal [ "acme/server", "acme/docs" ], cfg.reviews.repos
+    assert_equal [ "dependabot[bot]" ], cfg.reviews.exclude_authors
+    assert_equal [ 3, 7, 7, 14, 30 ], [ cfg.reviews.somewhat_days, cfg.reviews.really_days,
+                                        cfg.reviews.author_somewhat_days, cfg.reviews.author_really_days,
+                                        cfg.reviews.decision_days ]
+  end
 end

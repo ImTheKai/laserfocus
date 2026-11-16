@@ -21,8 +21,11 @@ board:
   unplanned_query: 'project = PG AND labels = "Priority" AND issuetype != Epic AND (statusCategory != Done OR resolved >= -7d)'
   new_unplanned_query: 'project = PG AND issuetype != Epic AND statusCategory = "To Do" AND created >= -10d'
   new_unplanned_days: 10
+  # github and email are optional. With them, the Reviews view shows display
+  # names for GitHub logins, and "Needs me" / "Mine" work for whoever signs in
+  # with that email.
   users:
-    - { jira_username: "alice", display_name: "Alice" }
+    - { jira_username: "alice", display_name: "Alice", github: "alice-gh", email: "alice@example.com" }
     - { jira_username: "bob",   display_name: "Bob" }
   status_map:
     "Open":        "new"
@@ -67,3 +70,27 @@ discovery:
   horizon_field: "customfield_11275"
   incubator_field: "customfield_11290"
   rank_field: "customfield_10019"
+
+# Optional. The Reviews view: open, ready-for-review (non-draft) PRs in these
+# GitHub repos, grouped by who they wait on. Needs GITHUB_TOKEN in .env (a
+# read-only token; LaserFocus never writes to GitHub). Leave the section out to
+# switch the view and its tab off.
+reviews:
+  repos:
+    - acme/server
+    - acme/docs
+  # Logins whose PRs never show, e.g. dependency bots.
+  exclude_authors: ["dependabot[bot]", "renovate[bot]"]
+  # Days a PR may wait on reviewers (or on a merge) before it is flagged stale,
+  # then critical. Critical PRs are counted in red on the Reviews tab.
+  staleness:
+    somewhat_days: 3
+    really_days:   7
+  # The same while the PR waits on its own author (changes requested, or
+  # questions not answered yet).
+  author_staleness:
+    somewhat_days: 7
+    really_days:   14
+  # A PR open this many days gets "decision needed": merge it, close it, or
+  # snooze it with the reason it stays open.
+  decision_days: 30

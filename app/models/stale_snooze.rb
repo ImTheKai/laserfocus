@@ -19,11 +19,12 @@ class StaleSnooze < ApplicationRecord
   end
 
   # Drops snoozes that can no longer apply: run out, the ticket changed status,
-  # or the ticket left the board.
+  # or the ticket left the board. PR snoozes (see ReviewPullRequest) share the
+  # table and are pruned by ReviewSync instead.
   def self.prune!(now: Time.current)
     where(snoozed_until: ..now).delete_all
     statuses = Issue.active.where(jira_key: select(:jira_key)).pluck(:jira_key, :jira_status).to_h
-    dead = all.reject { |s| statuses[s.jira_key] == s.jira_status }.map(&:id)
+    dead = all.reject { |s| ReviewPullRequest.snooze_key?(s.jira_key) || statuses[s.jira_key] == s.jira_status }.map(&:id)
     where(id: dead).delete_all if dead.any?
   end
 end

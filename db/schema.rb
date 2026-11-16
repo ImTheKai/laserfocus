@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_000001) do
   create_table "board_orders", force: :cascade do |t|
     t.json "collapsed_columns", default: [], null: false
     t.json "column_order", default: [], null: false
@@ -100,6 +100,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_000001) do
     t.index ["jira_key"], name: "index_issues_on_jira_key", unique: true
     t.index ["jira_status"], name: "index_issues_on_jira_status"
     t.index ["removed_at"], name: "index_issues_on_removed_at"
+  end
+
+  create_table "review_pull_requests", force: :cascade do |t|
+    t.integer "additions", default: 0, null: false
+    t.string "author"
+    t.string "author_association"
+    t.string "ci_state"
+    t.datetime "created_at", null: false
+    t.integer "deletions", default: 0, null: false
+    t.datetime "github_updated_at"
+    t.string "head_ref"
+    t.json "jira_keys", default: []
+    t.json "labels", default: []
+    t.datetime "last_push_at"
+    t.integer "number", null: false
+    t.datetime "opened_at", null: false
+    t.datetime "ready_at"
+    t.string "repo", null: false
+    t.json "requested_reviewers", default: []
+    t.string "review_decision"
+    t.json "reviews", default: []
+    t.string "stage", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.string "waiting_on", null: false
+    t.datetime "waiting_since", null: false
+    t.index ["repo", "number"], name: "index_review_pull_requests_on_repo_and_number", unique: true
+  end
+
+  create_table "review_sync_runs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "error_message"
+    t.integer "fetched_count", default: 0, null: false
+    t.datetime "finished_at"
+    t.boolean "ok", default: false, null: false
+    t.datetime "started_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "stale_snoozes", force: :cascade do |t|

@@ -1,0 +1,10 @@
+/ Says why the view is empty or behind, instead of an empty board.
+- if !configured
+  p.kb-next-empty No GitHub repos are configured, so there is nothing to show here yet. Add a reviews section to config/laserfocus.yml.
+- elsif LASER_FOCUS_CONFIG.reviews.github_token.nil?
+  p.kb-next-empty.kb-reviews-notice Set GITHUB_TOKEN (a read-only token) in .env so LaserFocus can read the open PRs.
+- elsif review_sync.nil?
+  p.kb-next-empty.kb-reviews-notice Waiting for the first GitHub sync.
+- elsif !review_sync.ok
+  p.kb-next-empty.kb-reviews-notice data-tone="warn" title=review_sync.error_message
+    | The last GitHub sync failed #{time_ago_in_words(review_sync.started_at)} ago, so these PRs are from the sync before it.

@@ -72,6 +72,13 @@ module LaserFocus
       @discovery = @raw["discovery"].present? ? DiscoverySection.new(@raw["discovery"]) : nil
     end
 
+    # Optional. The GitHub repos whose open, ready-for-review PRs make up the
+    # Reviews view. Absent, the view and its tab are switched off.
+    def reviews
+      return @reviews if defined?(@reviews)
+      @reviews = @raw["reviews"].present? ? ReviewsSection.new(@raw["reviews"]) : nil
+    end
+
     private
 
     def struct(hash)
@@ -110,6 +117,35 @@ module LaserFocus
       def issue_fields
         ([ "summary", "issuelinks" ] + [ horizon_field, incubator_field, rank_field ]).compact_blank.uniq
       end
+    end
+
+    class ReviewsSection
+      DEFAULT_SOMEWHAT_DAYS = 3
+      DEFAULT_REALLY_DAYS = 7
+      DEFAULT_AUTHOR_SOMEWHAT_DAYS = 7
+      DEFAULT_AUTHOR_REALLY_DAYS = 14
+      DEFAULT_DECISION_DAYS = 30
+
+      def initialize(h) = @h = h
+      def repos = Array(@h["repos"]).map(&:to_s).compact_blank.uniq(&:downcase)
+      # Logins whose PRs never show, e.g. dependency bots.
+      def exclude_authors = Array(@h["exclude_authors"]).map { |a| a.to_s.downcase }
+      # How long a PR may wait on reviewers (or on whoever merges) before it is
+      # flagged stale and then critical.
+      def somewhat_days = days(%w[staleness somewhat_days], DEFAULT_SOMEWHAT_DAYS)
+      def really_days   = days(%w[staleness really_days], DEFAULT_REALLY_DAYS)
+      # The same, for a PR that waits on its own author. Slower, so it does not
+      # shout at reviewers about work that is not theirs.
+      def author_somewhat_days = days(%w[author_staleness somewhat_days], DEFAULT_AUTHOR_SOMEWHAT_DAYS)
+      def author_really_days   = days(%w[author_staleness really_days], DEFAULT_AUTHOR_REALLY_DAYS)
+      # A PR open this long needs a decision: merge it, close it, or snooze it
+      # with the reason it stays open.
+      def decision_days = (@h["decision_days"] || DEFAULT_DECISION_DAYS).to_i
+      def github_token = ENV["GITHUB_TOKEN"].presence
+
+      private
+
+      def days(path, default) = (@h.dig(*path) || default).to_i
     end
 
     class BoardSection

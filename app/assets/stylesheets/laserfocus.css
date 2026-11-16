@@ -906,3 +906,90 @@ a.kb-act-pill { text-decoration: none; display: inline-flex; align-items: center
 [data-theme="dark"] .kb-snooze-badge { background: #232b38; color: #b4bccb; }
 [data-theme="dark"] .kb-snooze-btn-primary { background: #e2e8f0; border-color: #e2e8f0; color: #0f172a; }
 [data-theme="dark"] .kb-snooze-btn-primary:hover { background: #cbd5e1; }
+
+/* ---------- Reviews view ----------
+   The board's columns and cards, with a PR on each card. Staleness paper, age
+   chip and snooze come from the same rules as tickets. */
+.kb-tab-badge {
+  margin-left: 5px; font: 800 9.5px/1 var(--kb-ui); color: #fff; background: #dc2626;
+  border-radius: 8px; padding: 2px 5px; font-variant-numeric: tabular-nums;
+}
+[data-theme="dark"] .kb-tab-badge { background: #ef4444; }
+.kb-counts .decide { color: var(--kb-text); }
+.kb-counts .community { color: #0f766e; }
+[data-theme="dark"] .kb-counts .community { color: #5eead4; }
+
+/* Scope pills sit on top of an invisible copy of the board's grouping pills,
+   so this slot is exactly as wide on every view and the tabs never move. */
+.kb-scope-mode { position: relative; }
+.kb-scope-reserve { display: flex; gap: 4px; visibility: hidden; }
+.kb-scope-pills { position: absolute; inset: 0; display: flex; gap: 4px; align-items: center; justify-content: flex-end; }
+
+.kb-repo-menu { min-width: 270px; }
+.kb-repo-owner { color: var(--kb-text-mute); }
+.kb-repo-count { font: 700 11px var(--kb-ui); color: var(--kb-text-mute); font-variant-numeric: tabular-nums; }
+.kb-filter-row[data-empty="1"] .kb-filter-row-label,
+.kb-filter-row[data-empty="1"] .kb-repo-count { color: var(--kb-text-faint); }
+.kb-community-btn[data-on="1"] { background: #ccfbf1; border-color: #0f766e; }
+[data-theme="dark"] .kb-community-btn[data-on="1"] { background: #123632; border-color: #5eead4; }
+
+.kb-reviews-notice { padding-bottom: 0; }
+.kb-reviews-notice[data-tone="warn"] { color: #c2410c; }
+[data-theme="dark"] .kb-reviews-notice[data-tone="warn"] { color: #f0a860; }
+
+.kb-reviews-board { align-items: flex-start; }
+.kb-reviews-col { flex-basis: 260px; min-width: 250px; max-width: 400px; }
+.kb-col-decide {
+  margin-left: 4px; font-size: 9.5px; font-weight: 700;
+  color: #fff; background: #1e293b; border-radius: 4px; padding: 0 5px;
+}
+.kb-col-decide-alone { margin-left: auto; }
+[data-theme="dark"] .kb-col-decide { color: #0f172a; background: #e2e8f0; }
+.kb-col-tag-reviewers { background: #eff5ff; color: #1d4ed8; }
+.kb-col-tag-author { background: #fce7f3; color: #be185d; }
+.kb-col-tag-merge { background: #dcfce7; color: #15803d; }
+[data-theme="dark"] .kb-col-tag-reviewers { background: #1d2a44; color: #93b4f3; }
+[data-theme="dark"] .kb-col-tag-author { background: #3a1830; color: #f9a8d4; }
+[data-theme="dark"] .kb-col-tag-merge { background: #14301f; color: #6ee7a0; }
+.kb-col-empty { margin: 0; padding: 14px 6px; text-align: center; font: 500 11.5px/1.45 var(--kb-ui); color: var(--kb-text-mute); }
+
+.kb-pr-card .kb-card-row1 { min-width: 0; }
+.kb-pr-repo {
+  display: inline-flex; align-items: center; gap: 4px; min-width: 0;
+  font: 700 10px var(--kb-ui); color: #5b6675;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kb-pr-repo i { width: 7px; height: 7px; border-radius: 2px; flex: 0 0 auto; }
+[data-theme="dark"] .kb-pr-repo { color: #9aa3b3; }
+.kb-pr-card .kb-card-meta svg { display: block; }
+.kb-pr-row2 { flex-wrap: wrap; gap: 5px; }
+.kb-pr-diff { display: inline-flex; gap: 3px; font: 600 10px var(--kb-mono); }
+.kb-pr-diff .add { color: #16a34a; }
+.kb-pr-diff .del { color: #dc2626; }
+.kb-pr-chip {
+  display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;
+  font: 700 9.5px var(--kb-ui); border-radius: 4px; padding: 1px 5px;
+}
+.kb-pr-chip-jira { font-family: var(--kb-mono); font-weight: 600; background: #eff5ff; color: #1d4ed8; }
+.kb-pr-chip-community { background: #ccfbf1; color: #0f766e; }
+.kb-pr-chip-decide { background: #1e293b; color: #fff; }
+[data-theme="dark"] .kb-pr-chip-jira { background: #1d2a44; color: #93b4f3; }
+[data-theme="dark"] .kb-pr-chip-community { background: #123632; color: #5eead4; }
+[data-theme="dark"] .kb-pr-chip-decide { background: #e2e8f0; color: #0f172a; }
+.kb-pr-card[data-decision="1"] { box-shadow: 0 0 0 2px rgba(30, 41, 59, .22), var(--kb-card-shadow); }
+[data-theme="dark"] .kb-pr-card[data-decision="1"] { box-shadow: 0 0 0 2px rgba(226, 232, 240, .25); }
+
+.kb-pr-people { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; }
+.kb-pr-arrow { color: var(--kb-text-faint); font-size: 10px; margin: 0 1px; }
+.kb-pr-reviewer { position: relative; display: inline-flex; }
+.kb-pr-reviewer::after {
+  content: ""; position: absolute; right: -2px; bottom: -2px;
+  width: 7px; height: 7px; border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--kb-avatar-ring, #fff);
+}
+.kb-pr-reviewer[data-state="APPROVED"]::after { background: #22c55e; }
+.kb-pr-reviewer[data-state="CHANGES_REQUESTED"]::after { background: #ec4899; }
+.kb-pr-reviewer[data-state="COMMENTED"]::after { background: #3b82f6; }
+.kb-pr-reviewer[data-state="REQUESTED"] .kb-avatar { opacity: .55; box-shadow: 0 0 0 1.5px var(--kb-avatar-ring, #fff), 0 0 0 2.5px #aab2bd; }
+.kb-pr-reviewer[data-state="REQUESTED"]::after { display: none; }
+[data-theme="dark"] .kb-pr-reviewer::after { box-shadow: 0 0 0 1.5px #1c2430; }

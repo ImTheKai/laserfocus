@@ -1,0 +1,42 @@
+= turbo_stream_from "board"
+= turbo_stream_from "sync_status"
+
+.kb-shell data-controller="reviews snooze" data-snooze-days-value=LASER_FOCUS_CONFIG.board.snooze_days
+  header.kb-header
+    .kb-brand
+      = image_tag "/icon.png", alt: "", class: "kb-brand-logo"
+      span.kb-brand-name LaserFocus
+
+    - if @configured
+      = render "reviews/header_filters", presenter: @presenter
+    - else
+      = render "shared/header_filters", enabled: false
+
+    .kb-header-right
+      span.kb-counts
+        - if @configured
+          = "#{@presenter.cards.size} open · "
+          span.stale= "#{@presenter.stale_count} stale"
+          - if @presenter.decision_count > 0
+            | &nbsp;·&nbsp;
+            span.decide= "#{@presenter.decision_count} to decide"
+          - if @presenter.snoozed_count > 0
+            | &nbsp;·&nbsp;
+            span.snoozed= "#{@presenter.snoozed_count} snoozed"
+          - if @presenter.community_count > 0
+            | &nbsp;·&nbsp;
+            span.community= "#{@presenter.community_count} community"
+
+      = render "shared/view_tabs", current: :reviews
+
+      = render "shared/header_tools", enabled: @configured, reviews: @presenter, assignees: [], last_sync: @last_sync, warnings: @warnings
+
+  = render "reviews/notice", configured: @configured, review_sync: @review_sync
+
+  - if @configured
+    main.kb-board.kb-reviews-board#board-root data-reviews-target="root"
+      - @presenter.columns.each do |column|
+        = render "reviews/column", column: column, presenter: @presenter
+
+  div data-reviews-target="tooltip" data-board-target="tooltip" class="kb-tt" hidden=true
+  = render "board/snooze_menu"

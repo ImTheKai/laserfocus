@@ -99,4 +99,21 @@ class StaleSnoozesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to "/login"
     assert_equal 0, StaleSnooze.count
   end
+
+  test "snoozes a PR on the Reviews view for the state the ball is in" do
+    pr = ReviewPullRequest.create!(repo: "acme/server", number: 9, title: "Fix", url: "https://github.com/acme/server/pull/9",
+                                   author: "bob-gh", opened_at: 10.days.ago, stage: "needs", waiting_on: "reviewers",
+                                   waiting_since: 10.days.ago)
+    patch "/stale_snooze", params: { key: "acme/server#9", reason: "waiting on upstream" }, as: :json
+    assert_response :no_content
+
+    snooze = StaleSnooze.find_by!(jira_key: "acme/server#9")
+    assert_equal pr.snooze_state, snooze.jira_status
+    assert_equal "waiting on upstream", snooze.reason
+  end
+
+  test "an unknown PR key is not found" do
+    patch "/stale_snooze", params: { key: "acme/server#404" }, as: :json
+    assert_response :not_found
+  end
 end

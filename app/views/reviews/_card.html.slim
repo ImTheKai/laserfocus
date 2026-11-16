@@ -1,0 +1,65 @@
+- pr = card.pr
+- stage = ReviewsPresenter::STAGES.find { |s| s[:id] == pr.stage }
+- stale = staleness_meta(card.staleness)
+- marks = reviewer_marks(card)
+- people = ([ pr.author ] + marks.map(&:first)).compact.map(&:downcase).uniq
+- card_style = "--kb-state-color:#{stage[:color]};--kb-card-border:#{stale[:border]};--kb-paper:#{stale[:paper]};--kb-avatar-ring:#{stale[:paper]};"
+- data_attrs = { reviews_target: "card", repo: pr.repo.downcase, people: people.join(" "), community: (pr.community? ? "1" : "0"), needs_me: (presenter.needs_viewer?(card) ? "1" : "0"), mine: (presenter.viewer_authored?(card) ? "1" : "0"), staleness: card.staleness.to_s, search: [ pr.repo, "##{pr.number}", pr.title, pr.author, github_person(pr.author), *pr.jira_key_list, *marks.map(&:first) ].join(" ").downcase, action: "mouseenter->reviews#showTooltip mouseleave->reviews#hideTooltip", tooltip: review_tooltip(card, presenter).to_json }
+- data_attrs[:critical] = "1" if card.staleness == :really
+- data_attrs[:decision] = "1" if card.decision?
+- if card.snoozable?
+  - data_attrs[:action] += " contextmenu->snooze#open"
+  - data_attrs[:snooze_key] = pr.key
+  - data_attrs[:snooze_state] = stage[:label]
+  - data_attrs[:snooze_noun] = "PR"
+  - data_attrs[:snooze_moved] = "If the PR gets a new push or review, it starts fresh."
+  - data_attrs[:days_since_change] = card.days.to_s
+- if card.snooze
+  - data_attrs[:snoozed_by] = card.snooze.snoozed_by
+  - data_attrs[:snoozed_until] = snooze_until_label(card.snooze)
+  - data_attrs[:snooze_days_left] = card.snooze.days_left.to_s
+  - data_attrs[:snooze_reason] = card.snooze.reason if card.snooze.reason.present?
+
+= link_to pr.url, class: "kb-card kb-pr-card", style: card_style, data: data_attrs, target: "_blank", rel: "noreferrer" do
+  .kb-card-row1
+    span.kb-pr-repo title=pr.repo
+      i style="background:#{column_accent(pr.repo.downcase)};"
+      = pr.repo_name
+    span.kb-card-id= "##{pr.number}"
+    - if card.fresh_ready
+      span.kb-new-badge NEW
+    span.kb-card-meta
+      = ci_icon_svg(pr.ci_state)
+      span.kb-age style="background:#{stale[:bg]};color:#{stale[:fg]};" title="Waiting #{card.days} days on #{presenter.waiting_label(pr.waiting_on)}"
+        - if card.snoozed?
+          = snooze_icon_svg
+        - elsif card.stale?
+          span.dot style="background:#{stale[:dot]};"
+        | #{card.days}d
+  .kb-card-title= pr.title
+  .kb-card-row2.kb-pr-row2
+    span.kb-pr-diff
+      span.add= "+#{pr.additions}"
+      span.del= "−#{pr.deletions}"
+    - if card.decision?
+      span.kb-pr-chip.kb-pr-chip-decide
+        = decision_flag_svg
+        | decision needed
+    - pr.jira_key_list.first(2).each do |key|
+      span.kb-pr-chip.kb-pr-chip-jira= key
+    - if pr.community?
+      span.kb-pr-chip.kb-pr-chip-community= pr.first_time_contributor? ? "🌱 first PR" : "🌱 community"
+    span.kb-pr-people
+      - marks.each do |login, state|
+        - next if login.start_with?("@")
+        span.kb-pr-reviewer data-state=state
+          = github_avatar(login, size: 17)
+      - if marks.any? { |login, _| !login.start_with?("@") }
+        span.kb-pr-arrow aria-hidden="true" ←
+      = github_avatar(pr.author, size: 20)
+  .kb-ladder
+    - %w[#8b5cf6 #3b82f6 #22c55e].each_with_index do |color, i|
+      - if i <= stage[:step]
+        span style="background:#{color};"
+      - else
+        span

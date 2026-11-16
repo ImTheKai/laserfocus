@@ -53,4 +53,11 @@ class StaleSnoozeTest < ActiveSupport::TestCase
     StaleSnooze.prune!
     assert_equal [ "PG-11" ], StaleSnooze.pluck(:jira_key)
   end
+
+  test "prune leaves PR snoozes to ReviewSync" do
+    StaleSnooze.create!(jira_key: "acme/server#9", jira_status: "needs:reviewers:0",
+                        snoozed_until: 3.days.from_now, snoozed_by: "Alice")
+    StaleSnooze.prune!
+    assert StaleSnooze.exists?(jira_key: "acme/server#9")
+  end
 end

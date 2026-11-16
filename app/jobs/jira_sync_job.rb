@@ -18,6 +18,11 @@ class JiraSyncJob < ApplicationJob
       end
     end
 
-    JiraSync.new.run!
+    begin
+      JiraSync.new.run!
+    ensure
+      # Same cadence as Jira, but a failure on either side leaves the other alone.
+      ReviewSync.new.run! if ReviewSync.configured?
+    end
   end
 end

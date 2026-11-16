@@ -11,7 +11,7 @@ board:
   epic_query: 'project = PG AND labels = "Priority" AND status != Done'
   unplanned_query: 'project = PG AND labels = "Priority" AND issuetype != Epic AND parent is EMPTY AND (statusCategory != Done OR resolved >= -7d)'
   users:
-    - { jira_username: "alice", display_name: "Alice" }
+    - { jira_username: "alice", display_name: "Alice", github: "alice-gh", email: "alice@example.com" }
     - { jira_username: "bob",   display_name: "Bob" }
   status_map:
     "Backlog":     "new"
@@ -28,3 +28,16 @@ board:
     somewhat_days: 3
     really_days:   10
   ignore_staleness_for_new_issues: true
+
+reviews:
+  repos:
+    - acme/server
+    - acme/docs
+  exclude_authors: ["dependabot[bot]"]
+  staleness:
+    somewhat_days: 3
+    really_days:   7
+  author_staleness:
+    somewhat_days: 7
+    really_days:   14
+  decision_days: 30

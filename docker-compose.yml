@@ -17,6 +17,7 @@ services:
       JIRA_BASE_URL: ${JIRA_BASE_URL:-https://example.atlassian.net}
       JIRA_EMAIL: ${JIRA_EMAIL:-jira@example.com}
       JIRA_API_TOKEN: ${JIRA_API_TOKEN:-changeme}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-changeme}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-changeme}
       SELENIUM_REMOTE_URL: http://chromium:4444/wd/hub

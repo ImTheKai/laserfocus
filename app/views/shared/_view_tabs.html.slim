@@ -5,3 +5,11 @@
   - if LASER_FOCUS_CONFIG.board.community_label.present?
     a.kb-act-pill href=community_path data-on=(current == :community ? "1" : "0") Community
   a.kb-act-pill href=next_path data-on=(current == :next ? "1" : "0") Next
+  - if LASER_FOCUS_CONFIG.reviews
+    / The red count is there on every view, so piling-up reviews get noticed
+    / from the board too.
+    - critical = ReviewsPresenter.critical_count
+    a.kb-act-pill href=reviews_path data-on=(current == :reviews ? "1" : "0") title=(critical.positive? ? "#{critical} #{critical == 1 ? "PR is" : "PRs are"} critical: waiting far too long for a review, an answer or a merge" : "Open PRs ready for review")
+      | Reviews
+      - if critical.positive?
+        span.kb-tab-badge= critical

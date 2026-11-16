@@ -56,10 +56,13 @@ export default class extends Controller {
       this.infoReasonTarget.hidden = !ds.snoozeReason
       this.infoNoteTarget.textContent =
         `${ds.daysSinceChange} days in ${ds.snoozeState}. The highlight comes back when the snooze runs out. ` +
-        "If the ticket moves, it starts fresh in its new status."
+        (ds.snoozeMoved || "If the ticket moves, it starts fresh in its new status.")
     } else {
+      // Cards on the Reviews view are PRs; they end a snooze on a push or review.
+      const noun = ds.snoozeNoun || "ticket"
+      const ends = noun === "ticket" ? "the ticket changes status" : `the ${noun} gets a new push or review`
       this.snoozeSubTarget.textContent = `${ds.snoozeKey} has been in ${ds.snoozeState} for ${ds.daysSinceChange} days.`
-      this.snoozeNoteTarget.textContent = `Shown as fresh until ${this._untilLabel()}, or until the ticket changes status.`
+      this.snoozeNoteTarget.textContent = `Shown as fresh until ${this._untilLabel()}, or until ${ends}.`
       this.submitLabelTarget.textContent = `Snooze ${this.daysValue} ${this.daysValue === 1 ? "day" : "days"}`
       this.reasonTarget.value = ""
       this.submitTarget.disabled = false

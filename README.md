@@ -10,6 +10,7 @@ LaserFocus polls JIRA on a schedule, stores a denormalized snapshot in SQLite, a
 - Roadmap alignment: reads the Jira Product Discovery project and shows, in one line above the board, how many "Now" commitments actually have a column. An epic behind a "Now" item joins the board even without the `Priority` label, and columns are tagged with the roadmap item, the `Ongoing` lane, or a "nothing started" flag.
 - A `/community` view: the board for epics carrying the community label. Those epics move there: they no longer show on the main board, and neither do the roadmap "Now" items that deliver into them.
 - A `/next` view: the roadmap's "Next" items as columns, ranked left to right. The cards are the readiness steps (delivery ticket, epic on the board, tickets under it, committed): met ones fade back, the first open one says what to do in Jira. Board, Community and Next share the same header tabs.
+- A `/reviews` view: open, ready-for-review PRs (drafts left out) across the GitHub repos in `reviews.repos`, as columns by who they wait on: Needs review, In discussion, Changes requested, Approved. Cards carry the same age chip, stale paper and right-click snooze as tickets, plus CI state, size, Jira keys from the title or branch, and a 🌱 tag for contributors outside the org. A PR open for `reviews.decision_days` (default 30) is flagged "decision needed": merge it, close it, or snooze it with the reason it stays open. Filters for repo, community, people and search, plus "Needs me" / "Mine" for users with a `github:` login. The Reviews tab shows a red count of critical PRs on every view. LaserFocus only reads from GitHub.
 - Staleness highlighting: tickets get flagged "somewhat" and "really" stale after configurable day thresholds.
 - Stale snooze: right-click a stale card to snooze it, with an optional reason, when it is stuck for a good reason. For `board.staleness.snooze_days` (default 7) it shows as fresh with a moon on its age, and drops out of the stale counts. Anyone on the board sees who snoozed it and why in the tooltip, and can lift the snooze from the same menu. The snooze ends early when the ticket changes status.
 - Adaptive polling: tight tick interval while someone is actively viewing the board, long interval otherwise.
@@ -44,6 +45,7 @@ Two files. Secrets go in `.env`, everything else in `config/laserfocus.yml`.
 | `JIRA_BASE_URL` | e.g. `https://acme.atlassian.net` |
 | `JIRA_EMAIL` | JIRA account for the API token |
 | `JIRA_API_TOKEN` | Generated at id.atlassian.com → Security |
+| `GITHUB_TOKEN` | Optional, for the Reviews view. A read-only token (fine-grained with public read access, or classic with no scopes for public repos) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth client from Google Cloud Console |
 | `SECRET_KEY_BASE` | Rails secret (prod) |
 | `RAILS_MASTER_KEY` | Contents of `config/master.key` (prod) |
@@ -77,6 +79,14 @@ important sections:
   `incubator_field` and `rank_field` are the custom field ids on an idea, and
   `delivery_link_type_id` is the issue link type JPD uses for delivery
   tickets. Leave the section out to switch the roadmap features off.
+- `reviews.*` — optional Reviews view. `repos` lists the GitHub repos
+  (`owner/name`); `exclude_authors` hides bots; `staleness` (default 3 / 7
+  days) is the clock while a PR waits on reviewers or a merge,
+  `author_staleness` (default 7 / 14) while it waits on its author;
+  `decision_days` (default 30) flags long-open PRs. Give `board.users` entries
+  a `github:` login (and `email:`) to show display names and enable "Needs me"
+  and "Mine". GitHub is synced on the same tick as Jira, and a GitHub failure
+  never blocks the Jira sync. Leave the section out to switch the view off.
 - `polling.tick_seconds` / `active_window_minutes` / `idle_interval_minutes`
   — how often the sync job runs while the board is being watched vs.
   while it's idle.
