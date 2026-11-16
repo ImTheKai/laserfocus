@@ -22,12 +22,12 @@ class GithubClient
             number title url isDraft createdAt updatedAt additions deletions headRefName
             authorAssociation reviewDecision
             repository { nameWithOwner }
-            author { login }
+            author { login ... on User { name } }
             labels(first: 10) { nodes { name } }
             reviewRequests(first: 10) {
-              nodes { requestedReviewer { ... on User { login } ... on Team { slug } } }
+              nodes { requestedReviewer { ... on User { login name } ... on Team { slug } } }
             }
-            latestReviews(first: 20) { nodes { author { login } state submittedAt } }
+            latestReviews(first: 20) { nodes { author { login ... on User { name } } state submittedAt } }
             commits(last: 1) { nodes { commit { committedDate statusCheckRollup { state } } } }
             ready: timelineItems(itemTypes: [READY_FOR_REVIEW_EVENT], last: 1) {
               nodes { ... on ReadyForReviewEvent { createdAt } }

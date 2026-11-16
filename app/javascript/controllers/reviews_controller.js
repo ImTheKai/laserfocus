@@ -8,11 +8,13 @@ export default class extends Controller {
   static targets = [
     "card", "count", "empty", "tooltip", "search",
     "repoRow", "repoBtn", "repoBadge", "repoClear", "communityBtn", "scopeBtn",
-    "personRow", "peopleBtn", "peopleLabel", "peopleClear"
+    "personRow", "personCount", "peopleBtn", "peopleLabel", "peopleClear",
+    "roleBtn", "noReplyRow", "teamRow"
   ]
+  static ROLES = [ "any", "author", "replied", "requested" ]
 
   connect() {
-    this._state = { r: [], p: [], q: "", c: false, s: "all" }
+    this._state = this._blank()
     this._load()
     this._sync()
     this._onMorph = () => { this._load(); this._sync() }
@@ -39,6 +41,27 @@ export default class extends Controller {
     this._set({ r: [] })
   }
 
+  // How a ticked person must relate to a PR for the card to stay.
+  chooseRole(event) {
+    event.stopPropagation()
+    this._set({ o: event.currentTarget.dataset.role || "any" })
+  }
+
+  toggleNoReply(event) {
+    event.stopPropagation()
+    this._set({ n: !this._state.n })
+  }
+
+  // Ticks every team member at once, or unticks them all if all are ticked.
+  toggleTeam(event) {
+    event.stopPropagation()
+    const team = this._team()
+    const set = new Set(this._state.p)
+    const all = team.length > 0 && team.every((l) => set.has(l))
+    team.forEach((l) => (all ? set.delete(l) : set.add(l)))
+    this._set({ p: [...set] })
+  }
+
   togglePerson(event) {
     event.stopPropagation()
     this._toggleIn("p", event.currentTarget.dataset.login)
@@ -46,7 +69,7 @@ export default class extends Controller {
 
   clearPeople(event) {
     event.stopPropagation()
-    this._set({ p: [] })
+    this._set({ p: [], n: false })
   }
 
   toggleCommunity() {
@@ -80,10 +103,8 @@ export default class extends Controller {
     if (st.c && ds.community !== "1") return false
     if (st.s === "me" && ds.needsMe !== "1") return false
     if (st.s === "mine" && ds.mine !== "1") return false
-    if (st.p.length) {
-      const people = (ds.people || "").split(" ")
-      if (!st.p.some((p) => people.includes(p))) return false
-    }
+    if (st.n && ds.noReply !== "1") return false
+    if (st.p.length && !st.p.some((login) => this._involved(card, login, st.o))) return false
     const q = st.q.trim().toLowerCase()
     return !q || (ds.search || "").includes(q)
   }
@@ -113,21 +134,72 @@ export default class extends Controller {
     if (this.hasRepoClearTarget) this.repoClearTarget.hidden = st.r.length === 0
     if (this.hasCommunityBtnTarget) this.communityBtnTarget.dataset.on = st.c ? "1" : "0"
     this.scopeBtnTargets.forEach((b) => { b.dataset.on = b.dataset.scope === st.s ? "1" : "0" })
-    this.personRowTargets.forEach((row) => {
-      const on = st.p.includes(row.dataset.login)
+    this._syncPeople()
+    if (this.hasSearchTarget && this.searchTarget.value !== st.q) this.searchTarget.value = st.q
+  }
+
+  _syncPeople() {
+    const st = this._state
+    const mark = (row, on) => {
       row.dataset.on = on ? "1" : "0"
       const chk = row.querySelector(".check")
       if (chk) chk.hidden = !on
+    }
+    this.personRowTargets.forEach((row) => mark(row, st.p.includes(row.dataset.login)))
+    this.roleBtnTargets.forEach((b) => { b.dataset.on = b.dataset.role === st.o ? "1" : "0" })
+    if (this.hasNoReplyRowTarget) mark(this.noReplyRowTarget, st.n)
+    const team = this._team()
+    const teamOn = team.length > 0 && team.every((l) => st.p.includes(l))
+    if (this.hasTeamRowTarget) mark(this.teamRowTarget, teamOn)
+
+    // Each person's count follows the role switch, over all PRs.
+    const cards = this.cardTargets
+    this.personRowTargets.forEach((row) => {
+      const count = row.querySelector("[data-reviews-target='personCount']")
+      if (count) count.textContent = cards.filter((c) => this._involved(c, row.dataset.login, st.o)).length
     })
-    if (this.hasPeopleBtnTarget) this.peopleBtnTarget.dataset.on = st.p.length ? "1" : "0"
-    if (this.hasPeopleLabelTarget) this.peopleLabelTarget.textContent = st.p.length ? `${st.p.length} selected` : "People"
-    if (this.hasPeopleClearTarget) this.peopleClearTarget.hidden = st.p.length === 0
-    if (this.hasSearchTarget && this.searchTarget.value !== st.q) this.searchTarget.value = st.q
+
+    // A blue ring on whoever made a card match.
+    cards.forEach((card) => {
+      card.querySelectorAll(".kb-avatar[data-login]").forEach((av) => {
+        const login = av.dataset.login
+        av.classList.toggle("kb-avatar-hit", st.p.includes(login) && this._involved(card, login, st.o))
+      })
+    })
+
+    let who = ""
+    if (teamOn && st.p.length === team.length) who = "My team"
+    else if (st.p.length === 1) {
+      const row = this.personRowTargets.find((r) => r.dataset.login === st.p[0])
+      who = row?.querySelector(".name")?.textContent || st.p[0]
+    } else if (st.p.length) who = `${st.p.length} people`
+    const on = st.p.length > 0 || st.n
+    if (this.hasPeopleBtnTarget) this.peopleBtnTarget.dataset.on = on ? "1" : "0"
+    if (this.hasPeopleLabelTarget) this.peopleLabelTarget.textContent = [ st.n ? "No reply" : "", who ].filter(Boolean).join(" · ") || "People"
+    if (this.hasPeopleClearTarget) this.peopleClearTarget.hidden = !on
+  }
+
+  _involved(card, login, role) {
+    const ds = card.dataset
+    const has = (attr) => (ds[attr] || "").split(" ").includes(login)
+    if (role === "author") return ds.author === login
+    if (role === "replied") return has("replied")
+    if (role === "requested") return has("requested")
+    return ds.author === login || has("replied") || has("requested")
+  }
+
+  _team() {
+    const menu = this.element.querySelector(".kb-review-people")
+    return (menu?.dataset.team || "").split(" ").filter(Boolean)
+  }
+
+  _blank() {
+    return { r: [], p: [], q: "", c: false, s: "all", o: "any", n: false }
   }
 
   _save() {
     const st = this._state
-    const empty = !st.r.length && !st.p.length && !st.q && !st.c && st.s === "all"
+    const empty = !st.r.length && !st.p.length && !st.q && !st.c && st.s === "all" && st.o === "any" && !st.n
     const hash = empty ? "" : encodeURIComponent(JSON.stringify(st))
     history.replaceState(null, "", hash ? `#${hash}` : location.pathname + location.search)
   }
@@ -141,7 +213,9 @@ export default class extends Controller {
         p: Array.isArray(st.p) ? st.p : [],
         q: typeof st.q === "string" ? st.q : "",
         c: !!st.c,
-        s: [ "all", "me", "mine" ].includes(st.s) ? st.s : "all"
+        s: [ "all", "me", "mine" ].includes(st.s) ? st.s : "all",
+        o: this.constructor.ROLES.includes(st.o) ? st.o : "any",
+        n: !!st.n
       }
       // A scope the viewer cannot use (no github login) falls back to All.
       const btn = this.scopeBtnTargets.find((b) => b.dataset.scope === this._state.s)

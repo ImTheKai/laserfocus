@@ -35,5 +35,18 @@ class ReviewPullRequest < ApplicationRecord
   def jira_key_list = Array(jira_keys).map(&:to_s)
   def label_list = Array(labels).map(&:to_s)
 
+  def people_name_map = people_names.is_a?(Hash) ? people_names : {}
+
+  # Logins other than the author that left a review: a comment, an approval or
+  # a change request.
+  def replied_logins
+    review_list.filter_map do |r|
+      r["login"] if ReviewClassifier::COUNTED_STATES.include?(r["state"]) && !r["login"].to_s.casecmp?(author.to_s)
+    end
+  end
+
+  # Nobody but the author has commented or reviewed yet.
+  def no_reply? = replied_logins.empty?
+
   def reviewer_logins = (review_list.map { |r| r["login"] } + requested_list).compact.uniq
 end

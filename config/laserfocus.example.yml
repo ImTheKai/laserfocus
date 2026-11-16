@@ -21,9 +21,10 @@ board:
   unplanned_query: 'project = PG AND labels = "Priority" AND issuetype != Epic AND (statusCategory != Done OR resolved >= -7d)'
   new_unplanned_query: 'project = PG AND issuetype != Epic AND statusCategory = "To Do" AND created >= -10d'
   new_unplanned_days: 10
-  # github and email are optional. With them, the Reviews view shows display
-  # names for GitHub logins, and "Needs me" / "Mine" work for whoever signs in
-  # with that email.
+  # The Reviews view links people to GitHub by name: a GitHub login whose
+  # profile name matches display_name (ignoring case and accents) is that
+  # person. Add github: only where the names differ. email: ties a Google login
+  # to an entry when the Google account name differs from display_name.
   users:
     - { jira_username: "alice", display_name: "Alice", github: "alice-gh", email: "alice@example.com" }
     - { jira_username: "bob",   display_name: "Bob" }

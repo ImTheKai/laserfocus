@@ -14,7 +14,9 @@ class ReviewsSystemTest < ApplicationSystemTestCase
     StaleSnooze.delete_all
     create_review_pr(repo: "acme/server", number: 1, waiting_since: 9.days.ago)
     create_review_pr(repo: "acme/docs", number: 2, waiting_since: 9.days.ago, author: "outsider",
-                     author_association: "FIRST_TIME_CONTRIBUTOR")
+                     author_association: "FIRST_TIME_CONTRIBUTOR", requested_reviewers: [ "alice-gh" ],
+                     reviews: [ { "login" => "bobby", "state" => "COMMENTED" } ],
+                     people_names: { "bobby" => "Bob" })
     visit "/auth/google_oauth2/callback"
     visit "/reviews"
     assert_selector ".kb-pr-card", count: 2
@@ -48,5 +50,32 @@ class ReviewsSystemTest < ApplicationSystemTestCase
 
     assert_selector "#{SERVER}[data-staleness='snoozed']"
     assert StaleSnooze.exists?(jira_key: "acme/server#1")
+  end
+
+  test "the People filter matches by role, and No reply yet keeps unanswered PRs" do
+    find("[data-reviews-target='peopleBtn']").click
+    within ".kb-review-people" do
+      find(".kb-people-row[data-login='bobby']").click
+    end
+    assert_selector ".kb-pr-card", count: 1
+    assert_selector ".kb-pr-card[data-snooze-key='acme/docs#2'] .kb-avatar-hit[data-login='bobby']"
+
+    within(".kb-review-people") { click_button "Wrote it" }
+    assert_selector ".kb-pr-card", count: 0
+
+    within(".kb-review-people") { click_button "✕ Clear selection" }
+    within(".kb-review-people") { find("[data-reviews-target='noReplyRow']").click }
+    assert_selector ".kb-pr-card", count: 1
+    assert_selector ".kb-pr-card[data-snooze-key='acme/server#1']"
+    assert_selector "[data-reviews-target='peopleLabel']", text: "No reply"
+  end
+
+  test "My team ticks every team member at once" do
+    find("[data-reviews-target='peopleBtn']").click
+    within(".kb-review-people") { find("[data-reviews-target='teamRow']").click }
+
+    assert_selector "[data-reviews-target='peopleLabel']", text: "My team"
+    assert_selector ".kb-pr-card", count: 1
+    assert_selector ".kb-pr-card[data-snooze-key='acme/docs#2']"
   end
 end

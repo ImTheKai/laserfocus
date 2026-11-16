@@ -10,17 +10,15 @@ module ReviewsHelper
   }.freeze
   CI_WORD = { "ok" => "passing", "fail" => "failing", "pending" => "running" }.freeze
 
-  # The board.users display name for a GitHub login, else the login itself.
+  # The Jira display name for a team member's GitHub login, the GitHub profile
+  # name for everyone else (see ReviewPeople).
   def github_person(login)
-    @github_people ||= LASER_FOCUS_CONFIG.board.users
-                         .select { |u| u.github.present? }
-                         .to_h { |u| [ u.github.to_s.downcase, u.display_name.presence || u.github ] }
-    @github_people[login.to_s.downcase] || login.to_s
+    @presenter.is_a?(ReviewsPresenter) ? @presenter.people.display(login) : login.to_s
   end
 
   def github_avatar(login, size:)
     av = avatar_for(github_person(login))
-    tag.span(av[:initials], class: "kb-avatar",
+    tag.span(av[:initials], class: "kb-avatar", data: { login: login.to_s.downcase },
              style: "background:#{av[:color]};width:#{size}px;height:#{size}px;font-size:#{(size * 0.42).round(1)}px;",
              title: github_person(login))
   end
@@ -36,6 +34,10 @@ module ReviewsHelper
     when "pending"
       %(<svg width="12" height="12" viewBox="0 0 12 12" role="img" aria-label="CI running"><circle cx="6" cy="6" r="5" fill="none" stroke="#eab308" stroke-width="1.6" stroke-dasharray="3 2"/><circle cx="6" cy="6" r="1.8" fill="#eab308"/></svg>).html_safe
     end
+  end
+
+  def people_check_svg
+    %(<svg class="check" width="14" height="14" viewBox="0 0 14 14" hidden aria-hidden="true"><path d="M3 7.3l2.5 2.5L11 4.2" stroke="#2563eb" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>).html_safe
   end
 
   def decision_flag_svg

@@ -19,7 +19,7 @@ class ReviewSyncTest < ActiveSupport::TestCase
       "isDraft" => draft, "createdAt" => "2026-11-01T10:00:00Z", "updatedAt" => "2026-11-05T10:00:00Z",
       "additions" => 10, "deletions" => 2, "headRefName" => extra[:branch] || "fix-#{number}",
       "authorAssociation" => extra[:association] || "MEMBER", "reviewDecision" => decision,
-      "repository" => { "nameWithOwner" => repo }, "author" => { "login" => author },
+      "repository" => { "nameWithOwner" => repo }, "author" => { "login" => author, "name" => "Bob Builder" },
       "labels" => { "nodes" => [ { "name" => "bug" } ] },
       "reviewRequests" => { "nodes" => [ { "requestedReviewer" => { "login" => "ann-gh" } }, { "requestedReviewer" => { "slug" => "core" } } ] },
       "latestReviews" => { "nodes" => reviews },
@@ -43,6 +43,7 @@ class ReviewSyncTest < ActiveSupport::TestCase
     assert_equal [ "ann-gh", "@core" ], pr.requested_reviewers
     assert_equal [ "PG-12" ], pr.jira_keys
     assert_equal [ "bug" ], pr.labels
+    assert_equal({ "bob-gh" => "Bob Builder" }, pr.people_names)
   end
 
   test "asks GitHub for the configured repos" do

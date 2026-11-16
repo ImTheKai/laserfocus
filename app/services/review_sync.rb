@@ -83,11 +83,23 @@ class ReviewSync
         rr["login"] || (rr["slug"] && "@#{rr["slug"]}")
       end,
       jira_keys: "#{node["title"]} #{node["headRefName"]}".scan(JIRA_KEY).flatten.uniq,
+      people_names: people_names(node),
       stage: verdict.stage,
       waiting_on: verdict.waiting_on,
       waiting_since: verdict.waiting_since
     )
     pr
+  end
+
+  # login => the name on the GitHub profile, for everyone on the PR who set
+  # one. ReviewPeople matches these against the Jira display names.
+  def people_names(node)
+    actors = [ node["author"] ] +
+             Array(node.dig("latestReviews", "nodes")).map { |r| r["author"] } +
+             Array(node.dig("reviewRequests", "nodes")).map { |r| r["requestedReviewer"] }
+    actors.compact.each_with_object({}) do |a, h|
+      h[a["login"]] = a["name"] if a["login"].present? && a["name"].present?
+    end
   end
 
   # A PR snooze holds while the ball stays where it was when it was snoozed.

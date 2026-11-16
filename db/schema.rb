@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_000002) do
   create_table "board_orders", force: :cascade do |t|
     t.json "collapsed_columns", default: [], null: false
     t.json "column_order", default: [], null: false
@@ -116,6 +116,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_000001) do
     t.datetime "last_push_at"
     t.integer "number", null: false
     t.datetime "opened_at", null: false
+    t.json "people_names", default: {}
     t.datetime "ready_at"
     t.string "repo", null: false
     t.json "requested_reviewers", default: []

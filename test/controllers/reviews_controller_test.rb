@@ -71,4 +71,19 @@ class ReviewsControllerTest < ActionDispatch::IntegrationTest
     get "/reviews"
     assert_select ".kb-reviews-notice", text: /GITHUB_TOKEN/
   end
+
+  test "the People menu lists the team by Jira name, then everyone else" do
+    create_review_pr(number: 1, author: "bobby", people_names: { "bobby" => "Bob", "ext" => "Ext Ernal" },
+                     reviews: [ { "login" => "ext", "state" => "COMMENTED" } ], requested_reviewers: [ "alice-gh" ])
+    create_review_pr(number: 2, author: "ext")
+
+    get "/reviews"
+
+    assert_select ".kb-review-people[data-team='alice-gh bobby']"
+    assert_select ".kb-review-people .kb-people-row[data-login='bobby'] .name", text: "Bob"
+    assert_select ".kb-review-people .kb-people-row[data-login='ext'] .name", text: "Ext Ernal"
+    assert_select ".kb-review-people .kb-people-row[data-login='ext'] small", text: "1 wrote · 1 replied"
+    assert_select ".kb-review-people [data-reviews-target='noReplyRow'] .kb-people-n", text: "1"
+    assert_select ".kb-pr-card[href='https://github.com/acme/server/pull/1'][data-replied='ext'][data-requested='alice-gh'][data-no-reply='0']", 1
+  end
 end

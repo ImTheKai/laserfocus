@@ -64,7 +64,7 @@ class ReviewsPresenterTest < ActiveSupport::TestCase
                               reviews: [ { "login" => "alice-gh", "state" => "COMMENTED" } ])
     answered = create_review_pr(number: 3, stage: "discuss", waiting_on: "author",
                                 reviews: [ { "login" => "alice-gh", "state" => "COMMENTED" } ])
-    presenter = ReviewsPresenter.build(viewer: "alice-gh")
+    presenter = ReviewsPresenter.build(viewer: { github: "alice-gh" })
     by_id = presenter.cards.index_by { |c| c.pr.id }
 
     assert presenter.needs_viewer?(by_id[requested.id])
@@ -85,5 +85,25 @@ class ReviewsPresenterTest < ActiveSupport::TestCase
   test "lists every configured repo with its count" do
     create_review_pr(repo: "acme/server", number: 1)
     assert_equal [ [ "acme/server", 1 ], [ "acme/docs", 0 ] ], ReviewsPresenter.build.repos
+  end
+
+  test "the viewer is found by name when they have no github override" do
+    create_review_pr(number: 1, author: "kw", people_names: { "kw" => "Kai Wagner" })
+    presenter = ReviewsPresenter.build(viewer: { name: "Kai Wagner" })
+    assert presenter.viewer_authored?(presenter.cards.first)
+  end
+
+  test "splits people into the team and everyone else, with what they did" do
+    create_review_pr(number: 1, author: "zp", people_names: { "zp" => "Zsolt Parragi", "x9" => "Ext Person" },
+                     reviews: [ { "login" => "x9", "state" => "COMMENTED" } ])
+    users = [ OpenStruct.new(display_name: "Zsolt Parragi"), OpenStruct.new(display_name: "Nobody Here") ]
+    prs = ReviewPullRequest.all.to_a
+    presenter = ReviewsPresenter.new(prs: prs, people: ReviewPeople.from_prs(prs, users: users))
+
+    assert_equal [ "zp" ], presenter.team_logins
+    assert_equal [ "x9" ], presenter.outside_logins
+    assert_equal [ "Nobody Here" ], presenter.unmatched_members.map(&:display_name)
+    assert_equal({ wrote: 0, replied: 1, asked: 0 }, presenter.involvement("x9"))
+    assert_equal 0, presenter.no_reply_count
   end
 end

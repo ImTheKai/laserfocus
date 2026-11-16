@@ -25,8 +25,12 @@ class ReviewsPresenter
     def decision_count = cards.count(&:decision?)
   end
 
+  # viewer: { name:, github: } for the signed-in person, see ReviewsController.
   def self.build(viewer: nil, now: Time.current)
-    new(prs: ReviewPullRequest.all.to_a, snoozes: StaleSnooze.running(now).to_a, viewer: viewer, now: now)
+    viewer ||= {}
+    prs = ReviewPullRequest.all.to_a
+    people = ReviewPeople.from_prs(prs, viewer_name: viewer[:name], viewer_github: viewer[:github])
+    new(prs: prs, snoozes: StaleSnooze.running(now).to_a, people: people, now: now)
   end
 
   # Cheap enough for every page: the red count on the Reviews tab.
@@ -35,13 +39,13 @@ class ReviewsPresenter
     build(now: now).cards.count { |c| c.staleness == :really }
   end
 
-  attr_reader :viewer
+  attr_reader :people
 
-  def initialize(prs:, snoozes: [], viewer: nil, now: Time.current,
+  def initialize(prs:, snoozes: [], people: nil, now: Time.current,
                  config: LASER_FOCUS_CONFIG.reviews, lead: LASER_FOCUS_CONFIG.board.staleness_lead)
     @prs = prs
     @snoozes = snoozes.index_by { |s| s.jira_key.downcase }
-    @viewer = viewer&.downcase
+    @people = people || ReviewPeople.from_prs(prs)
     @now = now
     @config = config
     @lead = lead
@@ -70,10 +74,26 @@ class ReviewsPresenter
     @config.repos.map { |r| [ r, counts.fetch(r.downcase, 0) ] }
   end
 
-  # Everyone who wrote or reviews one of the PRs, for the People filter.
-  def people
-    cards.flat_map { |c| [ c.author, *c.pr.reviewer_logins ] }.compact.reject { |l| l.start_with?("@") }
-         .uniq(&:downcase).sort_by(&:downcase)
+  # Everyone who wrote, replied to or is asked to review one of the PRs, for
+  # the People filter: the team first, then everyone else, by display name.
+  def logins
+    @logins ||= cards.flat_map { |c| [ c.author, *c.pr.reviewer_logins ] }.compact
+                     .reject { |l| l.start_with?("@") }.uniq(&:downcase)
+  end
+
+  def team_logins = logins.select { |l| @people.team?(l) }.sort_by { |l| @people.display(l).downcase }
+  def outside_logins = logins.reject { |l| @people.team?(l) }.sort_by { |l| @people.display(l).downcase }
+  def unmatched_members = @people.unmatched_members(logins)
+  def no_reply_count = cards.count { |c| c.pr.no_reply? }
+
+  # How many PRs a login wrote, replied to, and is asked to review.
+  def involvement(login)
+    prs = cards.map(&:pr)
+    {
+      wrote: prs.count { |pr| pr.author.to_s.casecmp?(login) },
+      replied: prs.count { |pr| pr.replied_logins.any? { |l| l.casecmp?(login) } },
+      asked: prs.count { |pr| pr.requested_list.any? { |l| l.casecmp?(login) } }
+    }
   end
 
   def thresholds(waiting_on)
@@ -85,16 +105,16 @@ class ReviewsPresenter
   end
 
   # Review requested from the viewer, or the viewer reviewed and the author has
-  # pushed since. Nothing for a viewer without a github login in board.users.
+  # pushed since.
   def needs_viewer?(card)
-    return false unless @viewer
     pr = card.pr
-    return false if pr.author.to_s.downcase == @viewer
-    return true if pr.requested_list.any? { |l| l.downcase == @viewer }
-    pr.waiting_on == "reviewers" && pr.review_list.any? { |r| r["login"].to_s.downcase == @viewer }
+    return false if @people.me?(pr.author)
+    return true if pr.requested_list.any? { |l| @people.me?(l) }
+    pr.waiting_on == "reviewers" && pr.review_list.any? { |r| @people.me?(r["login"]) }
   end
 
-  def viewer_authored?(card) = @viewer.present? && card.author.to_s.downcase == @viewer
+  def viewer_authored?(card) = @people.me?(card.author)
+  def viewer? = @people.viewer?
 
   def waiting_label(waiting_on) = WAITING_LABEL.fetch(waiting_on, waiting_on)
 

@@ -925,6 +925,9 @@ a.kb-act-pill { text-decoration: none; display: inline-flex; align-items: center
 .kb-scope-reserve { display: flex; gap: 4px; visibility: hidden; }
 .kb-scope-pills { position: absolute; inset: 0; display: flex; gap: 4px; align-items: center; justify-content: flex-end; }
 
+.kb-filters-slot { position: relative; display: flex; }
+.kb-filters-reserve { display: flex; align-items: center; gap: 18px; visibility: hidden; }
+.kb-filters-over { position: absolute; inset: 0; display: flex; align-items: center; gap: 18px; }
 .kb-repo-menu { min-width: 270px; }
 .kb-repo-owner { color: var(--kb-text-mute); }
 .kb-repo-count { font: 700 11px var(--kb-ui); color: var(--kb-text-mute); font-variant-numeric: tabular-nums; }
@@ -993,3 +996,30 @@ a.kb-act-pill { text-decoration: none; display: inline-flex; align-items: center
 .kb-pr-reviewer[data-state="REQUESTED"] .kb-avatar { opacity: .55; box-shadow: 0 0 0 1.5px var(--kb-avatar-ring, #fff), 0 0 0 2.5px #aab2bd; }
 .kb-pr-reviewer[data-state="REQUESTED"]::after { display: none; }
 [data-theme="dark"] .kb-pr-reviewer::after { box-shadow: 0 0 0 1.5px #1c2430; }
+
+/* Reviews People menu: who wrote, replied to or is asked to review a PR. */
+.kb-review-people { width: 320px; max-height: 520px; }
+.kb-seg {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+  background: var(--kb-stack-bg); border-radius: 8px; padding: 2px; margin: 0 2px 6px;
+}
+.kb-seg button {
+  border: 0; background: transparent; cursor: pointer; border-radius: 6px; padding: 6px 2px;
+  font: 600 10.5px var(--kb-ui); color: var(--kb-text-soft);
+}
+.kb-seg button[data-on="1"] { background: var(--kb-surface); color: var(--kb-text); box-shadow: 0 1px 2px rgba(16, 24, 40, .12); }
+.kb-people-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.kb-people-who small { font: 500 10.5px var(--kb-ui); color: var(--kb-text-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kb-people-n { margin-left: auto; font: 700 11px var(--kb-ui); color: var(--kb-text-mute); font-variant-numeric: tabular-nums; }
+.kb-review-people .kb-people-row .check { margin-left: 6px; flex: 0 0 auto; }
+.kb-people-glyph {
+  width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center; font: 800 11px var(--kb-ui);
+}
+.kb-people-glyph-none { background: var(--kb-stack-bg); color: var(--kb-text-soft); border: 1.5px dashed var(--kb-text-faint); }
+.kb-people-glyph-team { background: #eff5ff; color: #1d4ed8; }
+[data-theme="dark"] .kb-people-glyph-team { background: #1d2a44; color: #93b4f3; }
+.kb-people-sep { height: 1px; background: var(--kb-border); margin: 5px 2px; }
+.kb-people-row-off { cursor: default; opacity: .6; }
+.kb-people-row-off:hover { background: transparent; }
+.kb-pr-card .kb-avatar.kb-avatar-hit { opacity: 1; box-shadow: 0 0 0 1.5px var(--kb-avatar-ring, #fff), 0 0 0 3.5px #2563eb; }
