@@ -91,7 +91,7 @@ class ReviewsSystemTest < ApplicationSystemTestCase
     within(".kb-review-people") { find(".kb-people-row[data-login='bobby']").click }
     assert_selector ".kb-pr-card", count: 1
 
-    create_review_pr(repo: "acme/server", number: 3, waiting_since: 1.day.ago,
+    create_review_pr(repo: "acme/server", number: 3, waiting_since: 9.days.ago,
                      reviews: [ { "login" => "bobby", "state" => "COMMENTED" } ])
     BoardBroadcasts.reviews
 
