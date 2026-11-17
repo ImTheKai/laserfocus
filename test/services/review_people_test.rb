@@ -35,4 +35,9 @@ class ReviewPeopleTest < ActiveSupport::TestCase
     assert_not people(viewer_name: "Zsolt Parragi").me?("geoHeil")
     assert_not people.viewer?
   end
+
+  test "any one of the viewer's names is enough" do
+    assert people(viewer_names: [ "Andrii P", "zsolt parragi" ]).me?("dutow")
+    assert_not people(viewer_names: [ "Andrii P" ]).me?("dutow")
+  end
 end

@@ -14,10 +14,10 @@
       - group_mode_options.each do |_, opt|
         span.kb-act-pill= opt[:label]
     .kb-scope-pills
-      - no_login = "Sign in with a Google account that has a name, or add yourself to board.users"
+      - linked = reviews.viewer_linked?
       button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="all" data-on="1" title=copy[:all_hint] All
-      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="me" data-on="0" disabled=!reviews.viewer? title=(reviews.viewer? ? copy[:needs_me_hint] : no_login) Needs me
-      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="mine" data-on="0" disabled=!reviews.viewer? title=(reviews.viewer? ? copy[:mine_hint] : no_login) Mine
+      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="me" data-on="0" disabled=!linked title=(linked ? copy[:needs_me_hint] : reviews.viewer_hint) Needs me
+      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="mine" data-on="0" disabled=!linked title=(linked ? copy[:mine_hint] : reviews.viewer_hint) Mine
 - else
   .kb-group-mode role="group" aria-label="Column grouping" data-controller=(enabled ? "group-mode" : nil)
     - group_mode_options.each do |mode, opt|

@@ -45,12 +45,13 @@ class IssuesPresenter
     def decision_count = cards.count(&:decision?)
   end
 
-  # viewer: { name:, github: } for the signed-in person, see ReviewsController.
+  # viewer: { names:, github:, google_name:, email: } for the signed-in person,
+  # see GithubViewer.
   def self.build(viewer: nil, now: Time.current)
     viewer ||= {}
     issues = GithubIssue.all.to_a
-    people = ReviewPeople.from_prs(issues, viewer_name: viewer[:name], viewer_github: viewer[:github])
-    new(issues: issues, snoozes: StaleSnooze.running(now).to_a, people: people, now: now)
+    people = ReviewPeople.from_prs(issues, viewer_names: viewer[:names] || [ viewer[:name] ], viewer_github: viewer[:github])
+    new(issues: issues, snoozes: StaleSnooze.running(now).to_a, people: people, now: now, viewer: viewer)
   end
 
   # Cheap enough for every page: the red count on the Issues tab. Only what
@@ -60,7 +61,7 @@ class IssuesPresenter
     build(now: now).cards.count { |c| c.staleness == :really && c.waiting_on == "team" }
   end
 
-  def initialize(issues:, snoozes: [], people: nil, now: Time.current,
+  def initialize(issues:, snoozes: [], people: nil, now: Time.current, viewer: {},
                  config: LASER_FOCUS_CONFIG.issues, lead: LASER_FOCUS_CONFIG.board.staleness_lead)
     @issues = issues
     @snoozes = snoozes.index_by { |s| s.jira_key.downcase }
@@ -68,6 +69,7 @@ class IssuesPresenter
     @now = now
     @config = config
     @lead = lead
+    @viewer = viewer
   end
 
   def copy = COPY

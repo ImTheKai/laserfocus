@@ -6,13 +6,14 @@ class ReviewPeople
   def self.normalize(name) = I18n.transliterate(name.to_s).downcase.squish
 
   # names: login => GitHub profile name, as collected by ReviewSync.
-  # viewer_name / viewer_github: the signed-in person, see ReviewsController.
-  def initialize(names: {}, users: LASER_FOCUS_CONFIG.board.users, viewer_name: nil, viewer_github: nil)
+  # viewer_names / viewer_github: the signed-in person, see GithubViewer. Any
+  # of the names matching is enough (Google name, Jira name, from the email).
+  def initialize(names: {}, users: LASER_FOCUS_CONFIG.board.users, viewer_names: [], viewer_name: nil, viewer_github: nil)
     @names = names.each_with_object({}) { |(login, name), h| h[login.to_s.downcase] = name.to_s }
     @users = users
     @by_github = users.select { |u| u.github.present? }.index_by { |u| u.github.to_s.downcase }
     @by_name = users.select { |u| u.display_name.present? }.index_by { |u| self.class.normalize(u.display_name) }
-    @viewer_name = self.class.normalize(viewer_name).presence
+    @viewer_names = (Array(viewer_names) + [ viewer_name ]).map { |n| self.class.normalize(n) }.compact_blank.uniq
     @viewer_github = viewer_github.to_s.downcase.presence
   end
 
@@ -42,14 +43,15 @@ class ReviewPeople
     @users.reject { |u| matched.include?(u) }
   end
 
-  def viewer? = @viewer_name.present? || @viewer_github.present?
+  def viewer? = @viewer_names.any? || @viewer_github.present?
+  def viewer_github? = @viewer_github.present?
 
   def me?(login)
     key = login.to_s.downcase
     return true if @viewer_github && key == @viewer_github
-    return false unless @viewer_name
+    return false if @viewer_names.empty?
     m = member(login)
-    candidate = m ? m.display_name : @names[key]
-    candidate.present? && self.class.normalize(candidate) == @viewer_name
+    candidates = [ m&.display_name, @names[key] ].compact_blank.map { |n| self.class.normalize(n) }
+    candidates.intersect?(@viewer_names)
   end
 end

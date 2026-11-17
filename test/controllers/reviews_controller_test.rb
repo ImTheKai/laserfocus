@@ -86,4 +86,32 @@ class ReviewsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".kb-review-people [data-reviews-target='noReplyRow'] .kb-people-n", text: "1"
     assert_select ".kb-pr-card[href='https://github.com/acme/server/pull/1'][data-replied='ext'][data-requested='alice-gh'][data-no-reply='0']", 1
   end
+
+  test "Mine links the viewer by their email when the Google name is spelled differently" do
+    OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+      provider: "google_oauth2", uid: "u2", info: { email: "andrew.pogrebnoi@example.com", name: "Andrii Pohrebnyi" }
+    )
+    get "/auth/google_oauth2/callback"
+    create_review_pr(number: 1, author: "zp", requested_reviewers: [ "dAdAbird" ],
+                     people_names: { "dAdAbird" => "Andrew Pogrebnoi" })
+
+    get "/reviews"
+
+    assert_select ".kb-shell[data-reviews-viewer-value='dadabird']"
+    assert_select "button[data-scope='mine']:not([disabled])"
+    assert_select ".kb-pr-card[data-needs-me='1']", 1
+  end
+
+  test "Mine is off, with the reason, when nobody on the open PRs is the viewer" do
+    OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+      provider: "google_oauth2", uid: "u3", info: { email: "nobody@example.com", name: "No Body" }
+    )
+    get "/auth/google_oauth2/callback"
+    create_review_pr(number: 1, author: "zp")
+
+    get "/reviews"
+
+    assert_select "button[data-scope='mine'][disabled][title*='No Body']"
+    assert_select "button[data-scope='mine'][title*='github:']"
+  end
 end

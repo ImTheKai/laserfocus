@@ -47,6 +47,18 @@ module GithubViewPresenter
 
   def viewer? = @people.viewer?
 
+  # Whether "Mine" and "Needs me" can work: the viewer has a github: override,
+  # or one of their names matched someone on the open items.
+  def viewer_linked? = viewer_login.present? || @people.viewer_github?
+
+  # Why "Mine" is off, so the viewer can fix it rather than see an empty view.
+  def viewer_hint
+    return "Sign in with a Google account that has a name, or add yourself to board.users" unless viewer?
+    tried = [ @viewer[:google_name] && "the name “#{@viewer[:google_name]}”", @viewer[:email] ].compact.join(" or ")
+    "Nobody on the open #{copy[:nouns]} could be linked to you (tried #{tried.presence || "your name"}). " \
+      "If you are on one, add github: <your login> to your entry in board.users."
+  end
+
   private
 
   # Counts with the staleness lead, like days_in_state on the board, so an item
