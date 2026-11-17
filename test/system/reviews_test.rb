@@ -93,9 +93,9 @@ class ReviewsSystemTest < ApplicationSystemTestCase
 
     create_review_pr(repo: "acme/server", number: 3, waiting_since: 1.day.ago,
                      reviews: [ { "login" => "bobby", "state" => "COMMENTED" } ])
-    page.execute_script("Turbo.session.refresh(location.href)")
+    BoardBroadcasts.reviews
 
-    assert_selector ".kb-pr-card[data-snooze-key='acme/server#3']"
+    assert_selector ".kb-pr-card[data-snooze-key='acme/server#3']", visible: :all
     assert_selector ".kb-pr-card", count: 2
     assert_selector ".kb-review-people", visible: true
     assert_selector ".kb-people-row[data-login='bobby'][data-on='1']"
