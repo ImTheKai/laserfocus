@@ -88,9 +88,14 @@ class ReviewsPresenterTest < ActiveSupport::TestCase
   end
 
   test "the viewer is found by name when they have no github override" do
-    create_review_pr(number: 1, author: "kw", people_names: { "kw" => "Kai Wagner" })
-    presenter = ReviewsPresenter.build(viewer: { name: "Kai Wagner" })
-    assert presenter.viewer_authored?(presenter.cards.first)
+    create_review_pr(number: 1, author: "KW", people_names: { "KW" => "Kai Wagner" })
+    assert_equal "kw", ReviewsPresenter.build(viewer: { name: "Kai Wagner" }).viewer_login
+  end
+
+  test "the viewer is found when they only reviewed, and by their github override" do
+    create_review_pr(number: 1, author: "zp", reviews: [ { "login" => "ImTheKai", "state" => "COMMENTED" } ])
+    assert_equal "imthekai", ReviewsPresenter.build(viewer: { name: "Someone", github: "imthekai" }).viewer_login
+    assert_nil ReviewsPresenter.build(viewer: { name: "Someone Else" }).viewer_login
   end
 
   test "splits people into the team and everyone else, with what they did" do

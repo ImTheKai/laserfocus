@@ -11,7 +11,11 @@ export default class extends Controller {
     "personRow", "personCount", "peopleBtn", "peopleLabel", "peopleClear",
     "roleBtn", "noReplyRow", "teamRow"
   ]
+  static values = { viewer: String }
   static ROLES = [ "any", "author", "replied", "requested" ]
+  // Attributes this controller owns. A live refresh must not put the server's
+  // defaults back, or an open menu snaps shut and the cards blink.
+  static OWNED = [ "data-hidden", "data-on" ]
 
   connect() {
     this._state = this._blank()
@@ -19,6 +23,8 @@ export default class extends Controller {
     this._sync()
     this._onMorph = () => { this._load(); this._sync() }
     document.addEventListener("turbo:morph", this._onMorph)
+    this._onBeforeMorphAttr = (event) => this._keepAttr(event)
+    document.addEventListener("turbo:before-morph-attribute", this._onBeforeMorphAttr)
     this._onMove = () => this._doHide()
     window.addEventListener("scroll", this._onMove, true)
     window.addEventListener("resize", this._onMove)
@@ -26,8 +32,26 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("turbo:morph", this._onMorph)
+    document.removeEventListener("turbo:before-morph-attribute", this._onBeforeMorphAttr)
     window.removeEventListener("scroll", this._onMove, true)
     window.removeEventListener("resize", this._onMove)
+  }
+
+  // Keeps the reader's state through a live refresh: what is shown or ticked,
+  // and any open dropdown or tooltip. Everything else morphs as usual, and
+  // _sync re-applies the filters to the new cards right after.
+  _keepAttr(event) {
+    const el = event.target
+    if (!this.element.contains(el)) return
+    const attr = event.detail.attributeName
+    if (this.constructor.OWNED.includes(attr)) return event.preventDefault()
+    if (attr === "hidden" && (el.matches("[data-filter-dropdown-target='menu']") || el === this._tooltipEl())) {
+      event.preventDefault()
+    }
+  }
+
+  _tooltipEl() {
+    return this.hasTooltipTarget ? this.tooltipTarget : null
   }
 
   // ---------- filters ----------
@@ -102,7 +126,7 @@ export default class extends Controller {
     if (st.r.length && !st.r.includes(ds.repo)) return false
     if (st.c && ds.community !== "1") return false
     if (st.s === "me" && ds.needsMe !== "1") return false
-    if (st.s === "mine" && ds.mine !== "1") return false
+    if (st.s === "mine" && !(this.viewerValue && this._involved(card, this.viewerValue, "any"))) return false
     if (st.n && ds.noReply !== "1") return false
     if (st.p.length && !st.p.some((login) => this._involved(card, login, st.o))) return false
     const q = st.q.trim().toLowerCase()
@@ -163,7 +187,9 @@ export default class extends Controller {
     cards.forEach((card) => {
       card.querySelectorAll(".kb-avatar[data-login]").forEach((av) => {
         const login = av.dataset.login
-        av.classList.toggle("kb-avatar-hit", st.p.includes(login) && this._involved(card, login, st.o))
+        const picked = st.p.includes(login) && this._involved(card, login, st.o)
+        const me = st.s === "mine" && login === this.viewerValue
+        av.classList.toggle("kb-avatar-hit", picked || me)
       })
     })
 

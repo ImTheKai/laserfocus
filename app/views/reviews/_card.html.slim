@@ -3,7 +3,7 @@
 - stale = staleness_meta(card.staleness)
 - marks = reviewer_marks(card)
 - card_style = "--kb-state-color:#{stage[:color]};--kb-card-border:#{stale[:border]};--kb-paper:#{stale[:paper]};--kb-avatar-ring:#{stale[:paper]};"
-- data_attrs = { reviews_target: "card", repo: pr.repo.downcase, community: (pr.community? ? "1" : "0"), needs_me: (presenter.needs_viewer?(card) ? "1" : "0"), mine: (presenter.viewer_authored?(card) ? "1" : "0"), staleness: card.staleness.to_s, author: pr.author.to_s.downcase, replied: pr.replied_logins.map(&:downcase).join(" "), requested: pr.requested_list.map(&:downcase).join(" "), no_reply: (pr.no_reply? ? "1" : "0"), search: [ pr.repo, "##{pr.number}", pr.title, *marks.map(&:first), pr.author, *([ pr.author ] + marks.map(&:first)).map { |l| github_person(l) }, *pr.jira_key_list ].join(" ").downcase, action: "mouseenter->reviews#showTooltip mouseleave->reviews#hideTooltip", tooltip: review_tooltip(card, presenter).to_json }
+- data_attrs = { reviews_target: "card", repo: pr.repo.downcase, community: (pr.community? ? "1" : "0"), needs_me: (presenter.needs_viewer?(card) ? "1" : "0"), staleness: card.staleness.to_s, author: pr.author.to_s.downcase, replied: pr.replied_logins.map(&:downcase).join(" "), requested: pr.requested_list.map(&:downcase).join(" "), no_reply: (pr.no_reply? ? "1" : "0"), search: [ pr.repo, "##{pr.number}", pr.title, *marks.map(&:first), pr.author, *([ pr.author ] + marks.map(&:first)).map { |l| github_person(l) }, *pr.jira_key_list ].join(" ").downcase, action: "mouseenter->reviews#showTooltip mouseleave->reviews#hideTooltip", tooltip: review_tooltip(card, presenter).to_json }
 - data_attrs[:critical] = "1" if card.staleness == :really
 - data_attrs[:decision] = "1" if card.decision?
 - if card.snoozable?

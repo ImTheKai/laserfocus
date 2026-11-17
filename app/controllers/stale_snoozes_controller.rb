@@ -10,17 +10,24 @@ class StaleSnoozesController < ApplicationController
       snoozed_by: session[:user_name].presence || current_user_email,
       reason: params[:reason].to_s.strip.first(StaleSnooze::REASON_LIMIT).presence
     )
-    BoardBroadcasts.board
+    broadcast(key)
     head :no_content
   end
 
   def destroy
-    deleted = StaleSnooze.where(jira_key: params[:key].to_s).delete_all
-    BoardBroadcasts.board if deleted.positive?
+    key = params[:key].to_s
+    deleted = StaleSnooze.where(jira_key: key).delete_all
+    broadcast(key) if deleted.positive?
     head :no_content
   end
 
   private
+
+  # The board shows the Reviews tab's red count, so a PR snooze refreshes both.
+  def broadcast(key)
+    BoardBroadcasts.reviews if ReviewPullRequest.snooze_key?(key)
+    BoardBroadcasts.board
+  end
 
   # A Jira ticket on the board, or an open PR on the Reviews view. Returns the
   # key to store and the state the snooze holds for.

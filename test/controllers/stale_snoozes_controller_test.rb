@@ -69,9 +69,11 @@ class StaleSnoozesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, StaleSnooze.count
   end
 
-  test "broadcasts the board after snoozing" do
-    assert_turbo_stream_broadcasts("board") do
-      patch "/stale_snooze", params: { key: "PG-11" }, as: :json
+  test "broadcasts the board after snoozing, and leaves the Reviews view alone" do
+    assert_no_turbo_stream_broadcasts("reviews") do
+      assert_turbo_stream_broadcasts("board") do
+        patch "/stale_snooze", params: { key: "PG-11" }, as: :json
+      end
     end
   end
 
@@ -104,7 +106,9 @@ class StaleSnoozesControllerTest < ActionDispatch::IntegrationTest
     pr = ReviewPullRequest.create!(repo: "acme/server", number: 9, title: "Fix", url: "https://github.com/acme/server/pull/9",
                                    author: "bob-gh", opened_at: 10.days.ago, stage: "needs", waiting_on: "reviewers",
                                    waiting_since: 10.days.ago)
-    patch "/stale_snooze", params: { key: "acme/server#9", reason: "waiting on upstream" }, as: :json
+    assert_turbo_stream_broadcasts("reviews") do
+      patch "/stale_snooze", params: { key: "acme/server#9", reason: "waiting on upstream" }, as: :json
+    end
     assert_response :no_content
 
     snooze = StaleSnooze.find_by!(jira_key: "acme/server#9")

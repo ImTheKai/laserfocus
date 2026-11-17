@@ -78,4 +78,26 @@ class ReviewsSystemTest < ApplicationSystemTestCase
     assert_selector ".kb-pr-card", count: 1
     assert_selector ".kb-pr-card[data-snooze-key='acme/docs#2']"
   end
+
+  test "Mine shows what ticking your own name shows, not only PRs you opened" do
+    # Alice (alice-gh) wrote nothing here; she is asked to review the docs PR.
+    click_button "Mine"
+    assert_selector ".kb-pr-card", count: 1
+    assert_selector ".kb-pr-card[data-snooze-key='acme/docs#2'] .kb-avatar-hit[data-login='alice-gh']"
+  end
+
+  test "a live refresh keeps the filters and an open menu as they were" do
+    find("[data-reviews-target='peopleBtn']").click
+    within(".kb-review-people") { find(".kb-people-row[data-login='bobby']").click }
+    assert_selector ".kb-pr-card", count: 1
+
+    create_review_pr(repo: "acme/server", number: 3, waiting_since: 1.day.ago,
+                     reviews: [ { "login" => "bobby", "state" => "COMMENTED" } ])
+    page.execute_script("Turbo.session.refresh(location.href)")
+
+    assert_selector ".kb-pr-card[data-snooze-key='acme/server#3']"
+    assert_selector ".kb-pr-card", count: 2
+    assert_selector ".kb-review-people", visible: true
+    assert_selector ".kb-people-row[data-login='bobby'][data-on='1']"
+  end
 end

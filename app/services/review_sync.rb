@@ -16,7 +16,9 @@ class ReviewSync
   end
 
   def run!(now: Time.current)
+    previous = ReviewSyncRun.ok.most_recent.first
     run = ReviewSyncRun.create!(started_at: now)
+    @changed = false
     nodes = @client.open_ready_pull_requests(@config.repos)
     excluded = @config.exclude_authors
 
@@ -27,11 +29,11 @@ class ReviewSync
       seen_ids << upsert(node).id
     end
     # Merged, closed, turned back into a draft, or from a repo no longer listed.
-    ReviewPullRequest.where.not(id: seen_ids).delete_all
+    @changed = true if ReviewPullRequest.where.not(id: seen_ids).delete_all.positive?
     prune_snoozes!(now)
 
     run.update!(finished_at: Time.current, ok: true, fetched_count: seen_ids.size)
-    BoardBroadcasts.board
+    broadcast if @changed || hour_turned?(previous, now)
     run
   rescue => e
     Rails.logger.warn("[ReviewSync] failed: #{e.class}: #{e.message}")
@@ -88,7 +90,19 @@ class ReviewSync
       waiting_on: verdict.waiting_on,
       waiting_since: verdict.waiting_since
     )
+    @changed = true if pr.saved_changes?
     pr
+  end
+
+  # A refresh resets whatever the reader is doing, so only send one when the
+  # PRs changed, or once an hour so the waiting days keep counting up.
+  def broadcast
+    BoardBroadcasts.reviews
+    BoardBroadcasts.board # the red count on the Reviews tab
+  end
+
+  def hour_turned?(previous, now)
+    previous.nil? || previous.started_at.beginning_of_hour != now.beginning_of_hour
   end
 
   # login => the name on the GitHub profile, for everyone on the PR who set
@@ -110,7 +124,9 @@ class ReviewSync
       pr = states[s.jira_key.downcase]
       s.snoozed_until <= now || pr.nil? || pr.snooze_state != s.jira_status
     end
-    StaleSnooze.where(id: dead.map(&:id)).delete_all if dead.any?
+    return if dead.empty?
+    StaleSnooze.where(id: dead.map(&:id)).delete_all
+    @changed = true
   end
 
   def time(v) = v.present? ? Time.zone.parse(v.to_s) : nil

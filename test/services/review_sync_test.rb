@@ -1,7 +1,9 @@
 require "test_helper"
+require "turbo/broadcastable/test_helper"
 
 class ReviewSyncTest < ActiveSupport::TestCase
   include ReviewPrFactory
+  include Turbo::Broadcastable::TestHelper
 
   class FakeClient
     attr_reader :asked_for
@@ -29,7 +31,7 @@ class ReviewSyncTest < ActiveSupport::TestCase
     }
   end
 
-  def sync(client) = ReviewSync.new(config: LASER_FOCUS_CONFIG.reviews, client: client).run!
+  def sync(client, now: Time.current) = ReviewSync.new(config: LASER_FOCUS_CONFIG.reviews, client: client).run!(now: now)
 
   test "stores open ready PRs with stage, clock and details" do
     run = sync(FakeClient.new([ node(number: 7, ready_at: "2026-11-02T10:00:00Z") ]))
@@ -70,6 +72,20 @@ class ReviewSyncTest < ActiveSupport::TestCase
     sync(FakeClient.new([ approved ]))
     assert_equal 1, ReviewPullRequest.count
     assert_equal "approved", ReviewPullRequest.first.stage
+  end
+
+  test "refreshes the Reviews view only when the PRs changed, or once an hour" do
+    now = Time.zone.parse("2026-11-17 10:05")
+    refreshes = lambda do |nodes, at|
+      pubsub_adapter.clear_messages("reviews")
+      sync(FakeClient.new(nodes), now: at)
+      broadcasts("reviews").size
+    end
+    assert_equal 1, refreshes.call([ node(number: 1) ], now)
+    assert_equal 0, refreshes.call([ node(number: 1) ], now + 1.minute)
+    assert_equal 1, refreshes.call([ node(number: 1, title: "PG-12: new title") ], now + 2.minutes)
+    assert_equal 1, refreshes.call([], now + 3.minutes)
+    assert_equal 1, refreshes.call([], now + 1.hour)
   end
 
   test "a failure is recorded and keeps the PRs from the run before" do

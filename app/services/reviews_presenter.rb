@@ -113,7 +113,12 @@ class ReviewsPresenter
     pr.waiting_on == "reviewers" && pr.review_list.any? { |r| @people.me?(r["login"]) }
   end
 
-  def viewer_authored?(card) = @people.me?(card.author)
+  # The viewer's GitHub login, so "Mine" matches exactly what ticking their
+  # own name under People does. Nil until they show up on an open PR.
+  def viewer_login
+    return @viewer_login if defined?(@viewer_login)
+    @viewer_login = logins.find { |l| @people.me?(l) }&.downcase
+  end
   def viewer? = @people.viewer?
 
   def waiting_label(waiting_on) = WAITING_LABEL.fetch(waiting_on, waiting_on)

@@ -15,7 +15,7 @@
       - no_login = "Sign in with a Google account that has a name, or add yourself to board.users"
       button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="all" data-on="1" title="Every PR that is ready for review" All
       button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="me" data-on="0" disabled=!reviews.viewer? title=(reviews.viewer? ? "Review requested from you, or you reviewed and the author has pushed since" : no_login) Needs me
-      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="mine" data-on="0" disabled=!reviews.viewer? title=(reviews.viewer? ? "PRs you opened" : no_login) Mine
+      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="mine" data-on="0" disabled=!reviews.viewer? title=(reviews.viewer? ? "PRs you wrote, replied to or are asked to review, like ticking your name under People" : no_login) Mine
 - else
   .kb-group-mode role="group" aria-label="Column grouping" data-controller=(enabled ? "group-mode" : nil)
     - group_mode_options.each do |mode, opt|

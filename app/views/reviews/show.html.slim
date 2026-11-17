@@ -1,7 +1,7 @@
-= turbo_stream_from "board"
+= turbo_stream_from "reviews"
 = turbo_stream_from "sync_status"
 
-.kb-shell data-controller="reviews snooze" data-snooze-days-value=LASER_FOCUS_CONFIG.board.snooze_days
+.kb-shell data-controller="reviews snooze" data-reviews-viewer-value=@presenter&.viewer_login.to_s data-snooze-days-value=LASER_FOCUS_CONFIG.board.snooze_days
   header.kb-header
     .kb-brand
       = image_tag "/icon.png", alt: "", class: "kb-brand-logo"
