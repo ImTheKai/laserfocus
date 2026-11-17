@@ -1,0 +1,57 @@
+- issue = card.issue
+- stage = IssuesPresenter::STAGES.find { |s| s[:id] == issue.stage }
+- stale = staleness_meta(card.staleness)
+- card_style = "--kb-state-color:#{stage[:color]};--kb-card-border:#{stale[:border]};--kb-paper:#{stale[:paper]};--kb-avatar-ring:#{stale[:paper]};"
+- people = [ issue.author, *issue.participant_logins ]
+- data_attrs = { reviews_target: "card", repo: issue.repo.downcase, community: (issue.community? ? "1" : "0"), needs_me: (presenter.needs_viewer?(card) ? "1" : "0"), staleness: card.staleness.to_s, author: issue.author.to_s.downcase, replied: issue.replied_logins.map(&:downcase).join(" "), requested: issue.assignee_list.map(&:downcase).join(" "), no_reply: (issue.no_reply? ? "1" : "0"), search: [ issue.repo, "##{issue.number}", issue.title, *people, *people.map { |l| github_person(l) }, *issue.label_list ].join(" ").downcase, action: "mouseenter->reviews#showTooltip mouseleave->reviews#hideTooltip", tooltip: issue_tooltip(card, presenter).to_json }
+- data_attrs[:critical] = "1" if card.staleness == :really
+- data_attrs[:decision] = "1" if card.decision?
+- if card.snoozable?
+  - data_attrs[:action] += " contextmenu->snooze#open"
+  - data_attrs[:snooze_key] = issue.key
+  - data_attrs[:snooze_state] = stage[:label]
+  - data_attrs[:snooze_noun] = "issue"
+  - data_attrs[:snooze_ends] = "someone comments and the ball moves"
+  - data_attrs[:snooze_moved] = "If someone comments and the ball moves, it starts fresh."
+  - data_attrs[:days_since_change] = card.days.to_s
+- if card.snooze
+  - data_attrs[:snoozed_by] = card.snooze.snoozed_by
+  - data_attrs[:snoozed_until] = snooze_until_label(card.snooze)
+  - data_attrs[:snooze_days_left] = card.snooze.days_left.to_s
+  - data_attrs[:snooze_reason] = card.snooze.reason if card.snooze.reason.present?
+
+= link_to issue.url, class: "kb-card kb-pr-card kb-issue-card", style: card_style, data: data_attrs, target: "_blank", rel: "noreferrer" do
+  .kb-card-row1
+    span.kb-pr-repo title=issue.repo
+      i style="background:#{column_accent(issue.repo.downcase)};"
+      = issue.repo_name
+    span.kb-card-id= "##{issue.number}"
+    - if card.fresh
+      span.kb-new-badge NEW
+    span.kb-card-meta
+      span.kb-age style="background:#{stale[:bg]};color:#{stale[:fg]};" title="Waiting #{card.days} days on #{presenter.waiting_label(issue.waiting_on)}"
+        - if card.snoozed?
+          = snooze_icon_svg
+        - elsif card.stale?
+          span.dot style="background:#{stale[:dot]};"
+        | #{card.days}d
+  .kb-card-title= issue.title
+  .kb-card-row2.kb-pr-row2
+    span.kb-issue-comments title="#{issue.comment_count} #{issue.comment_count == 1 ? "comment" : "comments"}"
+      = comment_icon_svg
+      = issue.comment_count
+    - if card.decision?
+      span.kb-pr-chip.kb-pr-chip-decide
+        = decision_flag_svg
+        | decision needed
+    - if issue.community?
+      span.kb-pr-chip.kb-pr-chip-community= issue.first_time_contributor? ? "🌱 first issue" : "🌱 community"
+    - issue.label_list.first(2).each do |label|
+      span.kb-pr-chip.kb-issue-label= label
+    span.kb-pr-people
+      - issue.assignee_list.each do |login|
+        span.kb-pr-reviewer data-state="ASSIGNED" title="Assigned"
+          = github_avatar(login, size: 17)
+      - if issue.assignee_list.any?
+        span.kb-pr-arrow aria-hidden="true" ←
+      = github_avatar(issue.author, size: 20)

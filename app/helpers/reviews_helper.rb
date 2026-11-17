@@ -13,7 +13,7 @@ module ReviewsHelper
   # The Jira display name for a team member's GitHub login, the GitHub profile
   # name for everyone else (see ReviewPeople).
   def github_person(login)
-    @presenter.is_a?(ReviewsPresenter) ? @presenter.people.display(login) : login.to_s
+    @presenter.respond_to?(:display) ? @presenter.display(login) : login.to_s
   end
 
   def github_avatar(login, size:)

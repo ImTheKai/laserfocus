@@ -1,6 +1,8 @@
 # Everything the Reviews view shows: the PRs grouped by review stage, each with
 # its waiting clock, staleness, "decision needed" flag and snooze.
 class ReviewsPresenter
+  include GithubViewPresenter
+
   STAGES = [
     { id: "needs",    label: "Needs review",      color: "#8b5cf6", step: 0 },
     { id: "discuss",  label: "In discussion",     color: "#3b82f6", step: 1 },
@@ -9,8 +11,23 @@ class ReviewsPresenter
   ].freeze
   WAITING_LABEL = { "reviewers" => "reviewers", "author" => "the author", "merge" => "whoever merges" }.freeze
 
+  # Wording for the shared header (see shared/_header_tools).
+  COPY = {
+    noun: "PR", nouns: "PRs",
+    all_hint: "Every PR that is ready for review",
+    needs_me_hint: "Review requested from you, or you reviewed and the author has pushed since",
+    mine_hint: "PRs you wrote, replied to or are asked to review, like ticking your name under People",
+    people_hint: "Filter by who wrote, replied to or is asked to review a PR",
+    roles: { "any" => "Are involved", "author" => "Wrote it", "replied" => "Replied", "requested" => "Are asked" },
+    wrote: "wrote", replied: "replied", asked: "asked",
+    no_reply_hint: "Nobody but the author has commented or reviewed",
+    community_hint: "Only PRs from people outside the org: first-time and returning contributors",
+    empty_repo: "No open PRs ready for review"
+  }.freeze
+
   Card = Struct.new(:pr, :days, :age_days, :staleness, :decision, :snooze, :fresh_ready, keyword_init: true) do
     delegate :repo, :number, :key, :title, :author, :stage, :waiting_on, to: :pr
+    def item = pr
     def stale? = %i[somewhat really].include?(staleness)
     def snoozed? = staleness == :snoozed
     def decision? = decision
@@ -39,8 +56,6 @@ class ReviewsPresenter
     build(now: now).cards.count { |c| c.staleness == :really }
   end
 
-  attr_reader :people
-
   def initialize(prs:, snoozes: [], people: nil, now: Time.current,
                  config: LASER_FOCUS_CONFIG.reviews, lead: LASER_FOCUS_CONFIG.board.staleness_lead)
     @prs = prs
@@ -64,38 +79,6 @@ class ReviewsPresenter
     end
   end
 
-  def stale_count = cards.count(&:stale?)
-  def snoozed_count = cards.count(&:snoozed?)
-  def decision_count = cards.count(&:decision?)
-  def community_count = cards.count { |c| c.pr.community? }
-
-  def repos
-    counts = cards.group_by { |c| c.repo.downcase }.transform_values(&:size)
-    @config.repos.map { |r| [ r, counts.fetch(r.downcase, 0) ] }
-  end
-
-  # Everyone who wrote, replied to or is asked to review one of the PRs, for
-  # the People filter: the team first, then everyone else, by display name.
-  def logins
-    @logins ||= cards.flat_map { |c| [ c.author, *c.pr.reviewer_logins ] }.compact
-                     .reject { |l| l.start_with?("@") }.uniq(&:downcase)
-  end
-
-  def team_logins = logins.select { |l| @people.team?(l) }.sort_by { |l| @people.display(l).downcase }
-  def outside_logins = logins.reject { |l| @people.team?(l) }.sort_by { |l| @people.display(l).downcase }
-  def unmatched_members = @people.unmatched_members(logins)
-  def no_reply_count = cards.count { |c| c.pr.no_reply? }
-
-  # How many PRs a login wrote, replied to, and is asked to review.
-  def involvement(login)
-    prs = cards.map(&:pr)
-    {
-      wrote: prs.count { |pr| pr.author.to_s.casecmp?(login) },
-      replied: prs.count { |pr| pr.replied_logins.any? { |l| l.casecmp?(login) } },
-      asked: prs.count { |pr| pr.requested_list.any? { |l| l.casecmp?(login) } }
-    }
-  end
-
   def thresholds(waiting_on)
     if waiting_on == "author"
       [ @config.author_somewhat_days, @config.author_really_days ]
@@ -113,13 +96,8 @@ class ReviewsPresenter
     pr.waiting_on == "reviewers" && pr.review_list.any? { |r| @people.me?(r["login"]) }
   end
 
-  # The viewer's GitHub login, so "Mine" matches exactly what ticking their
-  # own name under People does. Nil until they show up on an open PR.
-  def viewer_login
-    return @viewer_login if defined?(@viewer_login)
-    @viewer_login = logins.find { |l| @people.me?(l) }&.downcase
-  end
-  def viewer? = @people.viewer?
+  def copy = COPY
+  def display(login) = @people.display(login)
 
   def waiting_label(waiting_on) = WAITING_LABEL.fetch(waiting_on, waiting_on)
 
@@ -129,7 +107,7 @@ class ReviewsPresenter
     days = whole_days(pr.waiting_since)
     age_days = whole_days(pr.ready_at || pr.opened_at)
     somewhat, really = thresholds(pr.waiting_on)
-    bucket = days >= really ? :really : days >= somewhat ? :somewhat : :fresh
+    bucket = bucket_for(days, somewhat, really)
     decision = age_days >= @config.decision_days
     snooze = @snoozes[pr.key.downcase]
     snooze = nil unless snooze && snooze.snoozed_until > @now && snooze.jira_status == pr.snooze_state
@@ -141,12 +119,5 @@ class ReviewsPresenter
       snooze: snoozed ? snooze : nil,
       fresh_ready: pr.stage == "needs" && (pr.ready_at || pr.opened_at) > @now - 1.day
     )
-  end
-
-  # Counts with the staleness lead, like days_in_state on the board, so a PR
-  # looked at during standup is flagged again by the same standup days later.
-  def whole_days(since)
-    return 0 unless since
-    [ ((@now - since + @lead) / 1.day).to_i, 0 ].max
   end
 end

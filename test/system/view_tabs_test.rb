@@ -17,7 +17,7 @@ class ViewTabsTest < ApplicationSystemTestCase
   test "the view tabs sit in the same spot on every view" do
     [ [ 1400, 900 ], [ 1100, 900 ] ].each do |size|
       page.driver.browser.manage.window.resize_to(*size)
-      positions = %w[/ /community /next /reviews].map do |path|
+      positions = %w[/ /community /next /reviews /issues].map do |path|
         visit path
         assert_selector ".kb-view-tabs"
         page.evaluate_script("(r => [Math.round(r.left), Math.round(r.top)])(document.querySelector('.kb-view-tabs').getBoundingClientRect())")

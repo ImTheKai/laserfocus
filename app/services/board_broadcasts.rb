@@ -8,4 +8,8 @@ module BoardBroadcasts
   def self.reviews
     Turbo::StreamsChannel.broadcast_refresh_to("reviews")
   end
+
+  def self.issues
+    Turbo::StreamsChannel.broadcast_refresh_to("issues")
+  end
 end

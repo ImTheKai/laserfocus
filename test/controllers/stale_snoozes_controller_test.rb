@@ -120,4 +120,15 @@ class StaleSnoozesControllerTest < ActionDispatch::IntegrationTest
     patch "/stale_snooze", params: { key: "acme/server#404" }, as: :json
     assert_response :not_found
   end
+
+  test "snoozes an issue on the Issues view and refreshes that view" do
+    issue = GithubIssue.create!(repo: "acme/server", number: 12, title: "Crash", url: "https://github.com/acme/server/issues/12",
+                                author: "rita", opened_at: 10.days.ago, stage: "new", waiting_on: "team", waiting_since: 10.days.ago)
+    assert_no_turbo_stream_broadcasts("reviews") do
+      assert_turbo_stream_broadcasts("issues") do
+        patch "/stale_snooze", params: { key: "acme/server#12" }, as: :json
+      end
+    end
+    assert_equal issue.snooze_state, StaleSnooze.find_by!(jira_key: "acme/server#12").jira_status
+  end
 end

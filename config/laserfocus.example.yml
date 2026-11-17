@@ -95,3 +95,17 @@ reviews:
   # A PR open this many days gets "decision needed": merge it, close it, or
   # snooze it with the reason it stays open.
   decision_days: 30
+
+# Optional. The Issues view: open GitHub issues, by default in the reviews repos
+# above (and with its exclude_authors). On whenever reviews is set up; write
+# `issues: false` to switch it off. Everything below is optional.
+# issues:
+#   repos: ["acme/server"]
+#   # Days before an issue is stale, then critical, per column: waiting on the
+#   # team (New, Waiting on us), on the reporter, and the team's own backlog.
+#   staleness:
+#     team:     { somewhat_days: 3,  really_days: 7 }
+#     reporter: { somewhat_days: 14, really_days: 30 }
+#     backlog:  { somewhat_days: 30, really_days: 90 }
+#   # An issue open this many days gets "decision needed".
+#   decision_days: 90

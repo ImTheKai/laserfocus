@@ -79,6 +79,18 @@ module LaserFocus
       @reviews = @raw["reviews"].present? ? ReviewsSection.new(@raw["reviews"]) : nil
     end
 
+    # The Issues view: open GitHub issues, by default in the same repos as the
+    # Reviews view. On whenever reviews is set up; `issues: false` turns it off.
+    def issues
+      return @issues if defined?(@issues)
+      raw = @raw["issues"]
+      @issues = if raw == false || (raw.is_a?(Hash) && raw["enabled"] == false) || reviews.nil?
+        nil
+      else
+        IssuesSection.new(raw.is_a?(Hash) ? raw : {}, reviews)
+      end
+    end
+
     private
 
     def struct(hash)
@@ -146,6 +158,45 @@ module LaserFocus
       private
 
       def days(path, default) = (@h.dig(*path) || default).to_i
+    end
+
+    class IssuesSection
+      # [somewhat, really] days per column. Waiting on the team is urgent; an
+      # issue waiting on its reporter goes stale slowly (nudge them or close
+      # it), and the team's own backlog slower still.
+      DEFAULTS = {
+        "team" => [ 3, 7 ],
+        "reporter" => [ 14, 30 ],
+        "backlog" => [ 30, 90 ]
+      }.freeze
+      DEFAULT_DECISION_DAYS = 90
+
+      def initialize(h, reviews)
+        @h = h
+        @reviews = reviews
+      end
+
+      def repos
+        list = Array(@h["repos"]).map(&:to_s).compact_blank.uniq(&:downcase)
+        list.any? ? list : @reviews.repos
+      end
+
+      # Logins whose issues never show, e.g. bots. Defaults to the reviews list.
+      def exclude_authors
+        @h.key?("exclude_authors") ? Array(@h["exclude_authors"]).map { |a| a.to_s.downcase } : @reviews.exclude_authors
+      end
+
+      # waiting: "team", "reporter" or "backlog".
+      def thresholds(waiting)
+        somewhat, really = DEFAULTS.fetch(waiting)
+        conf = @h.dig("staleness", waiting) || {}
+        [ (conf["somewhat_days"] || somewhat).to_i, (conf["really_days"] || really).to_i ]
+      end
+
+      # An issue open this long needs a decision: fix it, close it, or snooze it
+      # with the reason it stays open.
+      def decision_days = (@h["decision_days"] || DEFAULT_DECISION_DAYS).to_i
+      def github_token = @reviews.github_token
     end
 
     class BoardSection

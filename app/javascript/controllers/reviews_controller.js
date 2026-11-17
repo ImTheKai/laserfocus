@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
-// The Reviews view: repo, community, scope, search and people filters over the
-// PR cards, plus the hover tooltip. Filters hide cards (and keep the column
+// The Reviews and Issues views: repo, community, scope, search and people
+// filters over the PR or issue cards, plus the hover tooltip. Filters hide cards (and keep the column
 // counts honest); the state lives in the URL hash like the board's, so it
 // survives the live refresh and can be shared as a link.
 export default class extends Controller {
@@ -292,6 +292,9 @@ export default class extends Controller {
         ${row("Open", t.open)}
         ${row("Decision", t.decision, "color:#f8fafc;font-weight:700")}
         ${row("Snoozed", t.snooze)}
+        ${row("Last word", t.lastword)}
+        ${row("Comments", t.comments)}
+        ${row("Assigned", t.assigned)}
         ${row("Reviews", t.reviews)}
         ${row("CI", t.ci)}
         ${row("Size", t.size)}

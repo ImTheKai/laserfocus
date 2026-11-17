@@ -1,0 +1,10 @@
+/ Says why the view is empty or behind, instead of an empty board.
+- if !configured
+  p.kb-next-empty The Issues view follows the reviews section of config/laserfocus.yml. Add one to see the open GitHub issues of its repos.
+- elsif LASER_FOCUS_CONFIG.issues.github_token.nil?
+  p.kb-next-empty.kb-reviews-notice Set GITHUB_TOKEN (a read-only token) in .env so LaserFocus can read the open issues.
+- elsif issue_sync.nil?
+  p.kb-next-empty.kb-reviews-notice Waiting for the first GitHub sync.
+- elsif !issue_sync.ok
+  p.kb-next-empty.kb-reviews-notice data-tone="warn" title=issue_sync.error_message
+    | The last GitHub sync failed #{time_ago_in_words(issue_sync.started_at)} ago, so these issues are from the sync before it.

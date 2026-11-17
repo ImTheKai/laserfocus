@@ -1,0 +1,62 @@
+# What the Reviews and Issues views share: who is who (the team versus
+# everyone else, the signed-in viewer), the People filter's counts, the
+# per-repo counts and the staleness clock. The including presenter provides
+# `cards`, each with an `item` (a ReviewPullRequest or a GithubIssue) that
+# answers author, replied_logins, asked_logins, participant_logins and no_reply?.
+module GithubViewPresenter
+  attr_reader :people
+
+  def stale_count = cards.count(&:stale?)
+  def snoozed_count = cards.count(&:snoozed?)
+  def decision_count = cards.count(&:decision?)
+  def community_count = cards.count { |c| c.item.community? }
+  def no_reply_count = cards.count { |c| c.item.no_reply? }
+
+  def repos
+    counts = cards.group_by { |c| c.repo.downcase }.transform_values(&:size)
+    @config.repos.map { |r| [ r, counts.fetch(r.downcase, 0) ] }
+  end
+
+  # Everyone who wrote, replied to or is asked onto one of the items, for the
+  # People filter: the team first, then everyone else, by display name.
+  def logins
+    @logins ||= cards.flat_map { |c| [ c.author, *c.item.participant_logins ] }.compact
+                     .reject { |l| l.start_with?("@") }.uniq(&:downcase)
+  end
+
+  def team_logins = logins.select { |l| @people.team?(l) }.sort_by { |l| @people.display(l).downcase }
+  def outside_logins = logins.reject { |l| @people.team?(l) }.sort_by { |l| @people.display(l).downcase }
+  def unmatched_members = @people.unmatched_members(logins)
+
+  # How many items a login wrote, replied to, and is asked onto.
+  def involvement(login)
+    items = cards.map(&:item)
+    {
+      wrote: items.count { |i| i.author.to_s.casecmp?(login) },
+      replied: items.count { |i| i.replied_logins.any? { |l| l.casecmp?(login) } },
+      asked: items.count { |i| i.asked_logins.any? { |l| l.casecmp?(login) } }
+    }
+  end
+
+  # The viewer's GitHub login, so "Mine" matches exactly what ticking their
+  # own name under People does. Nil until they show up on an open item.
+  def viewer_login
+    return @viewer_login if defined?(@viewer_login)
+    @viewer_login = logins.find { |l| @people.me?(l) }&.downcase
+  end
+
+  def viewer? = @people.viewer?
+
+  private
+
+  # Counts with the staleness lead, like days_in_state on the board, so an item
+  # looked at during standup is flagged again by the same standup days later.
+  def whole_days(since)
+    return 0 unless since
+    [ ((@now - since + @lead) / 1.day).to_i, 0 ].max
+  end
+
+  def bucket_for(days, somewhat, really)
+    days >= really ? :really : days >= somewhat ? :somewhat : :fresh
+  end
+end

@@ -1,11 +1,13 @@
 / Everything to the right of the view tabs. Next renders it too, with the
 / ticket controls switched off, so the tabs sit in the same spot on every view.
-/ Reviews passes its presenter as reviews: and gets search and People wired
-/ to its own PRs, plus scope pills where the grouping pills sit.
+/ Reviews and Issues pass their presenter as reviews: and get search and
+/ People wired to their own items, plus scope pills where the grouping pills
+/ sit. The presenter's copy holds the wording (PRs or issues).
 - off_hint = "Only on Board and Community"
 - reviews = local_assigns[:reviews]
+- copy = reviews&.copy
 - if reviews
-  .kb-group-mode.kb-scope-mode role="group" aria-label="Whose PRs"
+  .kb-group-mode.kb-scope-mode role="group" aria-label="Whose #{copy[:nouns]}"
     / Holds exactly the room the board's grouping pills take, so the tabs
     / stay put; the scope pills sit on top of it.
     .kb-scope-reserve aria-hidden="true"
@@ -13,9 +15,9 @@
         span.kb-act-pill= opt[:label]
     .kb-scope-pills
       - no_login = "Sign in with a Google account that has a name, or add yourself to board.users"
-      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="all" data-on="1" title="Every PR that is ready for review" All
-      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="me" data-on="0" disabled=!reviews.viewer? title=(reviews.viewer? ? "Review requested from you, or you reviewed and the author has pushed since" : no_login) Needs me
-      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="mine" data-on="0" disabled=!reviews.viewer? title=(reviews.viewer? ? "PRs you wrote, replied to or are asked to review, like ticking your name under People" : no_login) Mine
+      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="all" data-on="1" title=copy[:all_hint] All
+      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="me" data-on="0" disabled=!reviews.viewer? title=(reviews.viewer? ? copy[:needs_me_hint] : no_login) Needs me
+      button.kb-act-pill type="button" data-reviews-target="scopeBtn" data-action="reviews#chooseScope" data-scope="mine" data-on="0" disabled=!reviews.viewer? title=(reviews.viewer? ? copy[:mine_hint] : no_login) Mine
 - else
   .kb-group-mode role="group" aria-label="Column grouping" data-controller=(enabled ? "group-mode" : nil)
     - group_mode_options.each do |mode, opt|
@@ -27,13 +29,13 @@
     circle cx="6" cy="6" r="4.2"
     path d="M9.2 9.2L13 13" stroke-linecap="round"
   - if reviews
-    input.kb-search type="search" placeholder="Search PRs…" data-reviews-target="search" data-action="input->reviews#search" autocomplete="off" aria-label="Search PRs"
+    input.kb-search type="search" placeholder="Search #{copy[:nouns]}…" data-reviews-target="search" data-action="input->reviews#search" autocomplete="off" aria-label="Search #{copy[:nouns]}"
   - else
     input.kb-search type="search" placeholder="Search tickets…" data-board-target=(enabled ? "search" : nil) data-action=(enabled ? "input->board#search" : nil) autocomplete="off" disabled=!enabled title=(enabled ? nil : off_hint)
 
 - if reviews
   .kb-people data-controller="filter-dropdown" data-action="click@window->filter-dropdown#closeIfOutside"
-    button.kb-people-btn type="button" data-reviews-target="peopleBtn" data-action="filter-dropdown#toggle" data-on="0" title="Filter by who wrote, replied to or is asked to review a PR"
+    button.kb-people-btn type="button" data-reviews-target="peopleBtn" data-action="filter-dropdown#toggle" data-on="0" title=copy[:people_hint]
       svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#64748b" stroke-width="1.5" aria-hidden="true"
         circle cx="7" cy="4.5" r="2.3"
         path d="M2.5 12c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" stroke-linecap="round"
@@ -42,15 +44,15 @@
       svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="#94a3b8" stroke-width="1.6" aria-hidden="true"
         path d="M2 3.5L4.5 6 7 3.5" stroke-linecap="round"
     .kb-people-menu.kb-review-people data-filter-dropdown-target="menu" data-team=reviews.team_logins.map(&:downcase).join(" ") hidden=true
-      p.kb-filter-section-label Show PRs where they…
+      p.kb-filter-section-label Show #{copy[:nouns]} where they…
       .kb-seg role="group" aria-label="Match people as"
-        - { "any" => "Are involved", "author" => "Wrote it", "replied" => "Replied", "requested" => "Are asked" }.each do |role, label|
+        - copy[:roles].each do |role, label|
           button type="button" data-reviews-target="roleBtn" data-action="reviews#chooseRole" data-role=role data-on=(role == "any" ? "1" : "0") = label
       button.kb-people-row type="button" data-reviews-target="noReplyRow" data-action="reviews#toggleNoReply" data-on="0"
         span.kb-people-glyph.kb-people-glyph-none ∅
         span.kb-people-who
           span.name No reply yet
-          small Nobody but the author has commented or reviewed
+          small= copy[:no_reply_hint]
         span.kb-people-n= reviews.no_reply_count
         = people_check_svg
       - if reviews.team_logins.any?
@@ -58,7 +60,7 @@
           span.kb-people-glyph.kb-people-glyph-team ★
           span.kb-people-who
             span.name My team
-            small= "#{reviews.team_logins.size} on open PRs, matched to board.users"
+            small= "#{reviews.team_logins.size} on open #{copy[:nouns]}, matched to board.users"
           = people_check_svg
       .kb-people-sep
       - [ [ "Team", reviews.team_logins ], [ "Outside the team", reviews.outside_logins ] ].each do |title, logins|
@@ -72,11 +74,11 @@
               = av[:initials]
             span.kb-people-who
               span.name= github_person(login)
-              small= [ ("#{inv[:wrote]} wrote" if inv[:wrote].positive?), ("#{inv[:replied]} replied" if inv[:replied].positive?), ("#{inv[:asked]} asked" if inv[:asked].positive?) ].compact.join(" · ")
+              small= [ ("#{inv[:wrote]} #{copy[:wrote]}" if inv[:wrote].positive?), ("#{inv[:replied]} #{copy[:replied]}" if inv[:replied].positive?), ("#{inv[:asked]} #{copy[:asked]}" if inv[:asked].positive?) ].compact.join(" · ")
             span.kb-people-n data-reviews-target="personCount"
             = people_check_svg
       - if reviews.unmatched_members.any?
-        p.kb-filter-section-label title="Either nothing of theirs is open, or their GitHub profile name differs from Jira. Add github: to their board.users entry to link them." Team, not on open PRs
+        p.kb-filter-section-label title="Either nothing of theirs is open, or their GitHub profile name differs from Jira. Add github: to their board.users entry to link them." Team, not on open #{copy[:nouns]}
         - reviews.unmatched_members.each do |user|
           .kb-people-row.kb-people-row-off
             - av = avatar_for(user.display_name)

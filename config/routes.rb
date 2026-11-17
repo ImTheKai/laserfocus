@@ -3,6 +3,7 @@ Rails.application.routes.draw do
   get  "/community", to: "board#show", defaults: { view: "community" }
   get  "/next",    to: "next#show"
   get  "/reviews", to: "reviews#show"
+  get  "/issues",  to: "github_issues#show", as: :github_issues
   get  "/history", to: "epic_history#show"
   post "/sync", to: "syncs#create"
   patch "/column_order", to: "column_orders#update"

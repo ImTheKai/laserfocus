@@ -15,6 +15,16 @@ class GithubClientTest < ActiveSupport::TestCase
     assert_equal "is:pr is:open draft:false archived:false repo:acme/server repo:acme/docs", q
   end
 
+  test "the issues search asks for open issues in every repo, with the issue query" do
+    q = GithubClient.issues_query([ "acme/server", "acme/docs" ])
+    assert_equal "is:issue is:open archived:false repo:acme/server repo:acme/docs", q
+
+    stub_request(:post, "https://api.github.com/graphql")
+      .with { |req| body = JSON.parse(req.body); body["query"].include?("... on Issue") && body.dig("variables", "q").start_with?("is:issue") }
+      .to_return(status: 200, body: page([ pr(3) ]))
+    assert_equal [ 3 ], GithubClient.new(token: "t").open_issues([ "acme/server" ]).map { |n| n["number"] }
+  end
+
   test "pages through results with the token" do
     stub_request(:post, "https://api.github.com/graphql")
       .with(headers: { "Authorization" => "Bearer t0k" }) { |req| JSON.parse(req.body).dig("variables", "after").nil? }

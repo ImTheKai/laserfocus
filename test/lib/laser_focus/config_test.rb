@@ -152,4 +152,36 @@ class LaserFocusConfigTest < ActiveSupport::TestCase
                                         cfg.reviews.author_somewhat_days, cfg.reviews.author_really_days,
                                         cfg.reviews.decision_days ]
   end
+
+  test "issues follows reviews: same repos and defaults, off without reviews or with issues: false" do
+    assert_nil LaserFocus::Config.load_from_string(BASE).issues
+    cfg = LaserFocus::Config.load_from_string(BASE + <<~YAML)
+      reviews:
+        repos: ["acme/server"]
+        exclude_authors: ["bot"]
+    YAML
+    assert_equal [ "acme/server" ], cfg.issues.repos
+    assert_equal [ "bot" ], cfg.issues.exclude_authors
+    assert_equal [ [ 3, 7 ], [ 14, 30 ], [ 30, 90 ], 90 ],
+                 [ cfg.issues.thresholds("team"), cfg.issues.thresholds("reporter"), cfg.issues.thresholds("backlog"), cfg.issues.decision_days ]
+
+    off = LaserFocus::Config.load_from_string(BASE + "reviews:\n  repos: [\"a/b\"]\nissues: false\n")
+    assert_nil off.issues
+  end
+
+  test "issues can list its own repos and thresholds" do
+    cfg = LaserFocus::Config.load_from_string(BASE + <<~YAML)
+      reviews:
+        repos: ["acme/server"]
+      issues:
+        repos: ["acme/tracker"]
+        staleness:
+          team: { somewhat_days: 1, really_days: 2 }
+        decision_days: 60
+    YAML
+    assert_equal [ "acme/tracker" ], cfg.issues.repos
+    assert_equal [ 1, 2 ], cfg.issues.thresholds("team")
+    assert_equal [ 14, 30 ], cfg.issues.thresholds("reporter")
+    assert_equal 60, cfg.issues.decision_days
+  end
 end

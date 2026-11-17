@@ -7,6 +7,7 @@ ENV["JIRA_API_TOKEN"] = "test-token"
 require_relative "../config/environment"
 require "rails/test_help"
 require_relative "support/review_pr_factory"
+require_relative "support/github_issue_factory"
 
 module ActiveSupport
   class TestCase

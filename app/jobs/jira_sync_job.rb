@@ -23,6 +23,7 @@ class JiraSyncJob < ApplicationJob
     ensure
       # Same cadence as Jira, but a failure on either side leaves the other alone.
       ReviewSync.new.run! if ReviewSync.configured?
+      IssueSync.new.run! if IssueSync.configured?
     end
   end
 end

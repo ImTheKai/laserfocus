@@ -16,8 +16,8 @@ class ReviewSync
   end
 
   def run!(now: Time.current)
-    previous = ReviewSyncRun.ok.most_recent.first
-    run = ReviewSyncRun.create!(started_at: now)
+    previous = ReviewSyncRun.pulls.ok.most_recent.first
+    run = ReviewSyncRun.create!(kind: "pulls", started_at: now)
     @changed = false
     nodes = @client.open_ready_pull_requests(@config.repos)
     excluded = @config.exclude_authors
@@ -121,6 +121,7 @@ class ReviewSync
     states = ReviewPullRequest.all.index_by { |pr| pr.key.downcase }
     dead = StaleSnooze.all.select do |s|
       next false unless ReviewPullRequest.snooze_key?(s.jira_key)
+      next false if GithubIssue.find_by_key(s.jira_key) # IssueSync looks after those
       pr = states[s.jira_key.downcase]
       s.snoozed_until <= now || pr.nil? || pr.snooze_state != s.jira_status
     end

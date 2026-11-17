@@ -1,0 +1,44 @@
+= turbo_stream_from "issues"
+= turbo_stream_from "sync_status"
+
+/ Same controllers as Reviews: the cards carry the same data attributes, with
+/ commenters as "replied" and assignees as "requested".
+.kb-shell data-controller="reviews snooze" data-reviews-viewer-value=@presenter&.viewer_login.to_s data-snooze-days-value=LASER_FOCUS_CONFIG.board.snooze_days
+  header.kb-header
+    .kb-brand
+      = image_tag "/icon.png", alt: "", class: "kb-brand-logo"
+      span.kb-brand-name LaserFocus
+
+    - if @configured
+      = render "reviews/header_filters", presenter: @presenter
+    - else
+      = render "shared/header_filters", enabled: false
+
+    .kb-header-right
+      span.kb-counts
+        - if @configured
+          = "#{@presenter.cards.size} open · "
+          span.stale= "#{@presenter.stale_count} stale"
+          - if @presenter.decision_count > 0
+            | &nbsp;·&nbsp;
+            span.decide= "#{@presenter.decision_count} to decide"
+          - if @presenter.snoozed_count > 0
+            | &nbsp;·&nbsp;
+            span.snoozed= "#{@presenter.snoozed_count} snoozed"
+          - if @presenter.community_count > 0
+            | &nbsp;·&nbsp;
+            span.community= "#{@presenter.community_count} community"
+
+      = render "shared/view_tabs", current: :issues
+
+      = render "shared/header_tools", enabled: @configured, reviews: @presenter, assignees: [], last_sync: @last_sync, warnings: @warnings
+
+  = render "github_issues/notice", configured: @configured, issue_sync: @issue_sync
+
+  - if @configured
+    main.kb-board.kb-reviews-board#board-root data-reviews-target="root"
+      - @presenter.columns.each do |column|
+        = render "github_issues/column", column: column, presenter: @presenter
+
+  div data-reviews-target="tooltip" data-board-target="tooltip" class="kb-tt" hidden=true
+  = render "board/snooze_menu"

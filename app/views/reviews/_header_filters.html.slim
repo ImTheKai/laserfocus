@@ -15,7 +15,7 @@
         p.kb-filter-section-label Repositories
         - presenter.repos.sort_by { |r, n| [ -n, r.downcase ] }.each do |repo, count|
           - owner, name = repo.split("/", 2)
-          button.kb-filter-row type="button" data-reviews-target="repoRow" data-action="reviews#toggleRepo" data-repo=repo.downcase data-on="0" data-empty=(count.zero? ? "1" : "0") title=(count.zero? ? "No open PRs ready for review" : nil)
+          button.kb-filter-row type="button" data-reviews-target="repoRow" data-action="reviews#toggleRepo" data-repo=repo.downcase data-on="0" data-empty=(count.zero? ? "1" : "0") title=(count.zero? ? presenter.copy[:empty_repo] : nil)
             span.kb-filter-row-dot style="background:#{column_accent(repo.downcase)};"
             span.kb-filter-row-label
               span.kb-repo-owner= "#{owner}/"
@@ -27,5 +27,5 @@
         button.kb-filter-clear type="button" data-reviews-target="repoClear" data-action="reviews#clearRepos" hidden=true
           | ✕ Clear selection
 
-    button.kb-ghost-btn.kb-community-btn type="button" data-reviews-target="communityBtn" data-action="reviews#toggleCommunity" data-on="0" title="Only PRs from people outside the org: first-time and returning contributors"
+    button.kb-ghost-btn.kb-community-btn type="button" data-reviews-target="communityBtn" data-action="reviews#toggleCommunity" data-on="0" title=presenter.copy[:community_hint]
       | 🌱

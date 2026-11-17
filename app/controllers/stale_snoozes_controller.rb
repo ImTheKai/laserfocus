@@ -23,18 +23,21 @@ class StaleSnoozesController < ApplicationController
 
   private
 
-  # The board shows the Reviews tab's red count, so a PR snooze refreshes both.
+  # The board shows the Reviews and Issues tabs' red counts, so a PR or issue
+  # snooze refreshes the board too.
   def broadcast(key)
-    BoardBroadcasts.reviews if ReviewPullRequest.snooze_key?(key)
+    if GithubKeyed.key?(key)
+      GithubIssue.find_by_key(key) ? BoardBroadcasts.issues : BoardBroadcasts.reviews
+    end
     BoardBroadcasts.board
   end
 
-  # A Jira ticket on the board, or an open PR on the Reviews view. Returns the
-  # key to store and the state the snooze holds for.
+  # A Jira ticket on the board, or an open PR or issue on the Reviews or Issues
+  # view. Returns the key to store and the state the snooze holds for.
   def snooze_target(raw)
-    if ReviewPullRequest.snooze_key?(raw)
-      pr = ReviewPullRequest.find_by_key(raw)
-      pr && [ pr.key, pr.snooze_state ]
+    if GithubKeyed.key?(raw)
+      item = GithubKeyed.find(raw)
+      item && [ item.key, item.snooze_state ]
     else
       issue = Issue.active.find_by(jira_key: raw)
       issue && [ issue.jira_key, issue.jira_status ]

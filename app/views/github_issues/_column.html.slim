@@ -1,0 +1,36 @@
+- stage = column.stage
+- tag_text, tag_class = stage[:tag]
+- somewhat, really = presenter.thresholds(column.id)
+- buckets = { fresh: column.cards.count { |c| %i[fresh snoozed].include?(c.staleness) }, somewhat: column.cards.count { |c| c.staleness == :somewhat }, really: column.cards.count { |c| c.staleness == :really } }
+- bucket_color = { fresh: stage[:color], somewhat: staleness_meta(:somewhat)[:dot], really: staleness_meta(:really)[:dot] }
+
+section.kb-col.kb-reviews-col id="kb-issues-#{column.id}" data-stage=column.id
+  .kb-col-head
+    .kb-col-accent style="background:#{stage[:color]};"
+    .kb-col-title-row
+      span.kb-col-name= stage[:label]
+      span.kb-col-count data-reviews-target="count"= column.cards.size
+    .kb-col-meta
+      span.kb-col-key title="Stale after #{somewhat} days waiting, critical after #{really}"= "#{somewhat}d / #{really}d"
+      - if column.stale_count > 0
+        span.kb-col-stale
+          | ⚠ #{column.stale_count} stale
+      - if column.decision_count > 0
+        span.kb-col-decide class=("kb-col-decide-alone" if column.stale_count.zero?) title="Open #{presenter.decision_days}+ days: fix, close, or snooze with a reason"
+          = "#{column.decision_count} to decide"
+      - if column.snoozed_count > 0
+        span.kb-col-snoozed class=("kb-col-snoozed-alone" if column.stale_count.zero? && column.decision_count.zero?)
+          = snooze_icon_svg(size: 9)
+          | #{column.snoozed_count} snoozed
+    .kb-col-tags
+      span.kb-col-tag class=tag_class = tag_text
+    .kb-dist aria-hidden="true"
+      - buckets.each do |bucket, n|
+        - next if n.zero?
+        span style="flex:#{n};background:#{bucket_color[bucket]};"
+
+  .kb-col-body
+    - column.cards.each do |card|
+      = render "github_issues/card", card: card, presenter: presenter
+    p.kb-col-empty data-reviews-target="empty" data-total=column.cards.size hidden=column.cards.any?
+      | Nothing here right now.

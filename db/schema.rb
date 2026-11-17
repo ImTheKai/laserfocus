@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_17_000001) do
   create_table "board_orders", force: :cascade do |t|
     t.json "collapsed_columns", default: [], null: false
     t.json "column_order", default: [], null: false
@@ -48,7 +48,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_000002) do
     t.string "name", null: false
     t.datetime "occurred_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["epic_id"], name: "index_epic_events_on_epic_id"
     t.index ["jira_key"], name: "index_epic_events_on_jira_key"
     t.index ["occurred_at"], name: "index_epic_events_on_occurred_at"
   end
@@ -65,6 +64,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_000002) do
     t.datetime "updated_at", null: false
     t.index ["jira_key"], name: "index_epics_on_jira_key", unique: true
     t.index ["removed_at"], name: "index_epics_on_removed_at"
+  end
+
+  create_table "github_issues", force: :cascade do |t|
+    t.json "assignees", default: []
+    t.string "author"
+    t.string "author_association"
+    t.integer "comment_count", default: 0, null: false
+    t.json "comments", default: []
+    t.datetime "created_at", null: false
+    t.datetime "github_updated_at"
+    t.json "labels", default: []
+    t.integer "number", null: false
+    t.datetime "opened_at", null: false
+    t.json "people_names", default: {}
+    t.string "repo", null: false
+    t.string "stage", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.string "waiting_on", null: false
+    t.datetime "waiting_since", null: false
+    t.index ["repo", "number"], name: "index_github_issues_on_repo_and_number", unique: true
   end
 
   create_table "idea_deliveries", force: :cascade do |t|
@@ -136,6 +157,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_000002) do
     t.text "error_message"
     t.integer "fetched_count", default: 0, null: false
     t.datetime "finished_at"
+    t.string "kind", default: "pulls", null: false
     t.boolean "ok", default: false, null: false
     t.datetime "started_at", null: false
     t.datetime "updated_at", null: false

@@ -1,8 +1,9 @@
 require "net/http"
 require "json"
 
-# Read-only GitHub access for the Reviews view: one GraphQL search for the open,
-# non-draft PRs in the watched repos. Nothing here writes to GitHub.
+# Read-only GitHub access for the Reviews and Issues views: GraphQL searches for
+# the open, non-draft PRs and the open issues in the watched repos. Nothing here
+# writes to GitHub.
 class GithubClient
   class Error < StandardError; end
 
@@ -41,30 +42,64 @@ class GithubClient
     }
   GRAPHQL
 
+  ISSUES_QUERY = <<~GRAPHQL.freeze
+    query($q: String!, $first: Int!, $after: String) {
+      search(type: ISSUE, query: $q, first: $first, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          ... on Issue {
+            number title url createdAt updatedAt authorAssociation
+            repository { nameWithOwner }
+            author { login __typename ... on User { name } }
+            labels(first: 10) { nodes { name } }
+            assignees(first: 10) { nodes { login name } }
+            comments(last: 30) {
+              totalCount
+              nodes { createdAt authorAssociation author { login __typename ... on User { name } } }
+            }
+          }
+        }
+      }
+    }
+  GRAPHQL
+
   def initialize(token: LASER_FOCUS_CONFIG.reviews&.github_token)
     @token = token
   end
 
   # Raw PullRequest nodes for every open, ready-for-review PR in the repos.
   def open_ready_pull_requests(repos)
-    raise Error, "GITHUB_TOKEN is not set" if @token.blank?
+    search_repos(repos, QUERY) { |slice| self.class.search_query(slice) }
+  end
 
-    repos.each_slice(REPOS_PER_QUERY).flat_map do |slice|
-      search_all(self.class.search_query(slice))
-    end.uniq { |n| [ n.dig("repository", "nameWithOwner").to_s.downcase, n["number"] ] }
+  # Raw Issue nodes for every open issue in the repos.
+  def open_issues(repos)
+    search_repos(repos, ISSUES_QUERY) { |slice| self.class.issues_query(slice) }
   end
 
   def self.search_query(repos)
     ([ "is:pr", "is:open", "draft:false", "archived:false" ] + repos.map { |r| "repo:#{r}" }).join(" ")
   end
 
+  def self.issues_query(repos)
+    ([ "is:issue", "is:open", "archived:false" ] + repos.map { |r| "repo:#{r}" }).join(" ")
+  end
+
   private
 
-  def search_all(query)
+  def search_repos(repos, graphql)
+    raise Error, "GITHUB_TOKEN is not set" if @token.blank?
+
+    repos.each_slice(REPOS_PER_QUERY).flat_map do |slice|
+      search_all(yield(slice), graphql)
+    end.uniq { |n| [ n.dig("repository", "nameWithOwner").to_s.downcase, n["number"] ] }
+  end
+
+  def search_all(query, graphql)
     nodes = []
     after = nil
     MAX_PAGES.times do
-      data = post(QUERY, q: query, first: PAGE_SIZE, after: after)
+      data = post(graphql, q: query, first: PAGE_SIZE, after: after)
       search = data.fetch("search")
       nodes.concat(search.fetch("nodes").select { |n| n.is_a?(Hash) && n["number"] })
       break unless search.dig("pageInfo", "hasNextPage")
